@@ -31,6 +31,7 @@ struct lg_mx5500_receiver {
 	struct hid_device *hdev;
 
 	struct lg_mx5500_queue out_queue;
+	struct lg_mx5500_queue in_queue;
 
 	struct lg_mx5500_keyboard *keyboard;
 	struct lg_mx5500_mouse *mouse;
@@ -77,6 +78,33 @@ static void lg_mx5500_send_worker(struct work_struct *work)
 	spin_unlock_irqrestore(&queue->qlock, flags);
 }
 
+static void lg_mx5500_hid_receive(struct hid_device *hdev, u8 *buffer,
+								size_t count)
+{
+}
+
+static void lg_mx5500_receive_worker(struct work_struct *work)
+{
+	struct lg_mx5500_queue *queue = container_of(work, struct lg_mx5500_queue,
+									worker);
+	struct lg_mx5500_receiver *receiver = container_of(queue, struct lg_mx5500_receiver,
+									in_queue);
+	unsigned long flags;
+
+	spin_lock_irqsave(&queue->qlock, flags);
+
+	while (queue->head != queue->tail) {
+		spin_unlock_irqrestore(&queue->qlock, flags);
+		lg_mx5500_hid_receive(receiver->hdev, queue->queue[queue->tail].data,
+						queue->queue[queue->tail].size);
+		spin_lock_irqsave(&queue->qlock, flags);
+
+		queue->tail = (queue->tail + 1) % LG_MX5500_BUFSIZE;
+	}
+
+	spin_unlock_irqrestore(&queue->qlock, flags);
+}
+
 static void lg_mx5500_queue(struct lg_mx5500_receiver *receiver, struct lg_mx5500_queue *queue, const u8 *buffer,
 								size_t count)
 {
@@ -100,7 +128,7 @@ static void lg_mx5500_queue(struct lg_mx5500_receiver *receiver, struct lg_mx550
 	} else if (newhead != queue->tail) {
 		queue->head = newhead;
 	} else {
-		hid_warn(receiver->hdev, "Output queue is full");
+		hid_warn(receiver->hdev, "Queue is full");
 	}
 
 	spin_unlock_irqrestore(&queue->qlock, flags);
@@ -109,7 +137,18 @@ static void lg_mx5500_queue(struct lg_mx5500_receiver *receiver, struct lg_mx550
 static int lg_mx5500_event(struct hid_device *hdev, struct hid_report *report,
 				u8 *raw_data, int size)
 {
-	return 0;
+	struct lg_mx5500_receiver *receiver;
+
+	if(report->id < 0x10)
+	{
+		return 0;
+	}
+
+	receiver = hid_get_drvdata(hdev);
+	
+	lg_mx5500_queue(receiver, &receiver->in_queue, raw_data, size);
+
+	return 1;
 }
 
 static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct hid_device *hdev)
@@ -127,6 +166,9 @@ static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct hid_device *h
 
 	spin_lock_init(&receiver->out_queue.qlock);
 	INIT_WORK(&receiver->out_queue.worker, lg_mx5500_send_worker);
+	
+	spin_lock_init(&receiver->in_queue.qlock);
+	INIT_WORK(&receiver->in_queue.worker, lg_mx5500_receive_worker);
 
 	return receiver;
 }
