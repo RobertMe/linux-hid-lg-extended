@@ -4,18 +4,60 @@
 #define USB_VENDOR_ID_LOGITECH          0x046d
 #define USB_DEVICE_ID_MX5500_RECEIVER   0xc71c
 
+struct lg_mx5500_keyboard {
+};
+
+struct lg_mx5500_mouse {
+};
+
+struct lg_mx5500_receiver {
+	struct hid_device *hdev;
+	
+	struct lg_mx5500_keyboard *keyboard;
+	struct lg_mx5500_mouse *mouse;
+};
+
 static int lg_mx5500_event(struct hid_device *hdev, struct hid_report *report,
 				u8 *raw_data, int size)
 {
 	return 0;
 }
 
+static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct hid_device *hdev)
+{
+	struct lg_mx5500_receiver *receiver;
+	
+	receiver = kzalloc(sizeof(*receiver), GFP_KERNEL);
+	if(!receiver)
+		return NULL;
+	
+	receiver->hdev = hdev;
+	receiver->keyboard = NULL;
+	receiver->mouse = NULL;
+	hid_set_drvdata(hdev, receiver);
+	
+	return receiver;
+}
+
+static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
+{
+	kfree(receiver);
+}
+
 static int lg_mx5500_hid_probe(struct hid_device *hdev,
                                 const struct hid_device_id *id)
 {
+	struct lg_mx5500_receiver *receiver;
 	unsigned int connect_mask = HID_CONNECT_DEFAULT;
 	int ret;
 
+	receiver = lg_mx5500_receiver_create(hdev);
+	if(!receiver)
+	{
+		hid_err(hdev, "Can't alloc device\n");
+		return -ENOMEM;
+	}
+	
 	ret = hid_parse(hdev);
 	if (ret) {
 		hid_err(hdev, "parse failed\n");
@@ -30,12 +72,16 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 
 	return 0;
 err_free:
+	lg_mx5500_receiver_destroy(receiver);
 	return ret;
 }
 
 static void lg_mx5500_hid_remove(struct hid_device *hdev)
 {
+	struct lg_mx5500_receiver *receiver = hid_get_drvdata(hdev);
+	
 	hid_hw_stop(hdev);
+	lg_mx5500_receiver_destroy(receiver);
 }
 
 static const struct hid_device_id lg_mx5500_hid_devices[] = {
