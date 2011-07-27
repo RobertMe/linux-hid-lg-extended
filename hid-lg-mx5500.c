@@ -148,7 +148,7 @@ static int lg_mx5500_event(struct hid_device *hdev, struct hid_report *report,
 	
 	lg_mx5500_queue(receiver, &receiver->in_queue, raw_data, size);
 
-	return 1;
+	return 0;
 }
 
 static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct hid_device *hdev)
