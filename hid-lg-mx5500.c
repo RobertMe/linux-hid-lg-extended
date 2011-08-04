@@ -1,69 +1,37 @@
-#include <linux/device.h>
 #include <linux/hid.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
 
+#include "hid-lg-mx5500.h"
+#include "hid-lg-mx5500-receiver.h"
+
 #define USB_VENDOR_ID_LOGITECH          0x046d
 #define USB_DEVICE_ID_MX5500_RECEIVER   0xc71c
 
-#define LG_MX5500_BUFSIZE 32
+void lg_mx5500_set_data(struct lg_mx5500 *device, void *data)
+{
+	device->data = data;
+}
 
-enum lg_mx5500_actions {
-	LG_MX5500_ACTION_SET = 0x80,
-	LG_MX5500_ACTION_GET = 0x81,
-	LG_MX5500_ACTION_DO = 0x83,
-};
+void *lg_mx5500_get_data(struct lg_mx5500 *device)
+{
+	return device->data;
+}
 
-struct lg_mx5500_buf {
-	u8 data[HID_MAX_BUFFER_SIZE];
-	size_t size;
-};
+void lg_mx5500_set_hid_receive_handler(struct lg_mx5500 *device,
+				       lg_mx5500_hid_receive_handler receive_handler)
+{
+	device->receive_handler = receive_handler;
+}
 
-struct lg_mx5500_queue {
-	spinlock_t qlock;
-	u8 head;
-	u8 tail;
-	struct lg_mx5500_buf queue[LG_MX5500_BUFSIZE];
-	struct work_struct worker;
-};
-
-struct lg_mx5500_keyboard {
-};
-
-struct lg_mx5500_mouse {
-};
-
-struct lg_mx5500_receiver {
-	struct hid_device *hdev;
-
-	struct lg_mx5500_queue out_queue;
-	struct lg_mx5500_queue in_queue;
-
-	u8 initialized;
-	u8 mode;
-
-	struct lg_mx5500_keyboard *keyboard;
-	struct lg_mx5500_mouse *mouse;
-};
-
-#define lg_mx5500_handler_create(dev) struct lg_mx5500_##dev##_handler {	\
-	u8 action;							\
-	u8 first;							\
-	void (*func)(struct lg_mx5500_##dev *device, const u8 *payload, size_t size); \
-};
-
-lg_mx5500_handler_create(receiver);
-lg_mx5500_handler_create(keyboard);
-lg_mx5500_handler_create(mouse);
-
-static void lg_mx5500_queue(struct lg_mx5500_receiver *receiver, struct lg_mx5500_queue *queue, const u8 *buffer,
+void lg_mx5500_queue(struct lg_mx5500 *device, struct lg_mx5500_queue *queue, const u8 *buffer,
 								size_t count)
 {
 	unsigned long flags;
 	u8 newhead;
 
 	if (count > HID_MAX_BUFFER_SIZE) {
-		hid_warn(receiver->hdev, "Sending too large output report\n");
+		hid_warn(device->hdev, "Sending too large output report\n");
 		return;
 	}
 
@@ -79,7 +47,7 @@ static void lg_mx5500_queue(struct lg_mx5500_receiver *receiver, struct lg_mx550
 	} else if (newhead != queue->tail) {
 		queue->head = newhead;
 	} else {
-		hid_warn(receiver->hdev, "Queue is full");
+		hid_warn(device->hdev, "Queue is full");
 	}
 
 	spin_unlock_irqrestore(&queue->qlock, flags);
@@ -104,19 +72,19 @@ static ssize_t lg_mx5500_hid_send(struct hid_device *hdev, u8 *buffer,
 	return ret;
 }
 
-static void lg_mx5500_send_worker(struct work_struct *work)
+void lg_mx5500_send_worker(struct work_struct *work)
 {
 	struct lg_mx5500_queue *queue = container_of(work, struct lg_mx5500_queue,
-									worker);
-	struct lg_mx5500_receiver *receiver = container_of(queue, struct lg_mx5500_receiver,
-									out_queue);
+								worker);
+	struct lg_mx5500 *device= container_of(queue, struct lg_mx5500,
+								out_queue);
 	unsigned long flags;
 
 	spin_lock_irqsave(&queue->qlock, flags);
 
 	while (queue->head != queue->tail) {
 		spin_unlock_irqrestore(&queue->qlock, flags);
-		lg_mx5500_hid_send(receiver->hdev, queue->queue[queue->tail].data,
+		lg_mx5500_hid_send(device->hdev, queue->queue[queue->tail].data,
 						queue->queue[queue->tail].size);
 		spin_lock_irqsave(&queue->qlock, flags);
 
@@ -126,106 +94,20 @@ static void lg_mx5500_send_worker(struct work_struct *work)
 	spin_unlock_irqrestore(&queue->qlock, flags);
 }
 
-static void lg_mx5500_receiver_set_mode(struct lg_mx5500_receiver *receiver, u8 mode)
-{
-	u8 cmd[7];
-	
-	cmd[0] = 0x10;
-	cmd[1] = 0xFF;
-	cmd[2] = LG_MX5500_ACTION_SET;
-	cmd[3] = 0x00;
-	cmd[4] = 0x00;
-	cmd[5] = mode;
-	cmd[6] = 0x00;
-	lg_mx5500_queue(receiver, &receiver->out_queue, cmd, sizeof(cmd));
-}
-
-static int lg_mx5500_receiver_update_mode(struct lg_mx5500_receiver *receiver,
-								const u8 *buffer, size_t count)
-{
-	if(count < 6) {
-		hid_err(receiver->hdev, "To few bytes to read mode");
-		return 1;
-	}
-	receiver->mode = buffer[5];
-	hid_dbg(receiver->hdev, "Mode changed to 0x%02x", receiver->mode);
-	
-	return 0;
-}
-
-static void lg_mx5500_receiver_handle_get_mode(struct lg_mx5500_receiver *receiver,
-								const u8 *buffer, size_t count)
-{
-	if(lg_mx5500_receiver_update_mode(receiver, buffer, count))
-		return;
-	
-	if(receiver->initialized)
-		return;
-	
-	if(receiver->mode != 0x03)
-		lg_mx5500_receiver_set_mode(receiver, 0x03);
-}
-
-static void lg_mx5500_receiver_handle_set_mode(struct lg_mx5500_receiver *receiver,
-								const u8 *buffer, size_t count)
-{
-	if(lg_mx5500_receiver_update_mode(receiver, buffer, count))
-		return;
-	
-	if(receiver->initialized)
-		return;
-}
-
-static struct lg_mx5500_receiver_handler lg_mx5500_receiver_handlers[] = {
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x00,
-		.func = lg_mx5500_receiver_handle_get_mode },
-	{ .action = LG_MX5500_ACTION_SET, .first = 0x00,
-		.func = lg_mx5500_receiver_handle_set_mode },
-	{ }
-};
-
-static void lg_mx5500_receiver_handle(struct lg_mx5500_receiver *receiver, u8 *buffer,
-								size_t count)
-{
-	int i;
-	struct lg_mx5500_receiver_handler *handler;
-
-	for(i = 0; lg_mx5500_receiver_handlers[i].action ||
-		lg_mx5500_receiver_handlers[i].first; i++) {
-		handler = &lg_mx5500_receiver_handlers[i];
-		if(handler->action == buffer[2] &&
-				handler->first == buffer[3]) {
-			handler->func(receiver, buffer, count);
-		}
-	}
-}
-
-static void lg_mx5500_hid_receive(struct hid_device *hdev, u8 *buffer,
-								size_t count)
-{
-	if(count < 4) {
-		hid_err(hdev, "Too few bytes to handle");
-		return;
-	}
-	
-	if(buffer[1] == 0xFF) {
-		lg_mx5500_receiver_handle(hid_get_drvdata(hdev), buffer, count);
-	}
-}
-
-static void lg_mx5500_receive_worker(struct work_struct *work)
+void lg_mx5500_receive_worker(struct work_struct *work)
 {
 	struct lg_mx5500_queue *queue = container_of(work, struct lg_mx5500_queue,
-									worker);
-	struct lg_mx5500_receiver *receiver = container_of(queue, struct lg_mx5500_receiver,
-									in_queue);
+								worker);
+	struct lg_mx5500 *device= container_of(queue, struct lg_mx5500,
+								in_queue);
 	unsigned long flags;
 
 	spin_lock_irqsave(&queue->qlock, flags);
 
 	while (queue->head != queue->tail) {
 		spin_unlock_irqrestore(&queue->qlock, flags);
-		lg_mx5500_hid_receive(receiver->hdev, queue->queue[queue->tail].data,
+		if(device->receive_handler)
+			device->receive_handler(device, queue->queue[queue->tail].data,
 						queue->queue[queue->tail].size);
 		spin_lock_irqsave(&queue->qlock, flags);
 
@@ -238,58 +120,59 @@ static void lg_mx5500_receive_worker(struct work_struct *work)
 static int lg_mx5500_event(struct hid_device *hdev, struct hid_report *report,
 				u8 *raw_data, int size)
 {
-	struct lg_mx5500_receiver *receiver;
+	struct lg_mx5500 *device;
 
 	if(report->id < 0x10)
 	{
 		return 0;
 	}
 
-	receiver = hid_get_drvdata(hdev);
-	
-	lg_mx5500_queue(receiver, &receiver->in_queue, raw_data, size);
+	device = hid_get_drvdata(hdev);
+
+	lg_mx5500_queue(device, &device->in_queue, raw_data, size);
 
 	return 0;
 }
 
-static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct hid_device *hdev)
+static struct lg_mx5500 *lg_mx5500_create(struct hid_device *hdev)
 {
-	struct lg_mx5500_receiver *receiver;
+	struct lg_mx5500 *device;
 
-	receiver = kzalloc(sizeof(*receiver), GFP_KERNEL);
-	if(!receiver)
+	device = kzalloc(sizeof(*device), GFP_KERNEL);
+	if(!device)
 		return NULL;
 
-	receiver->hdev = hdev;
-	receiver->keyboard = NULL;
-	receiver->mouse = NULL;
-	receiver->initialized = 0;
-	hid_set_drvdata(hdev, receiver);
+	device->hdev = hdev;
+	device->data = NULL;
+	device->receive_handler = NULL;
+	hid_set_drvdata(hdev, device);
 
-	spin_lock_init(&receiver->out_queue.qlock);
-	INIT_WORK(&receiver->out_queue.worker, lg_mx5500_send_worker);
+	spin_lock_init(&device->out_queue.qlock);
+	INIT_WORK(&device->out_queue.worker, lg_mx5500_send_worker);
 	
-	spin_lock_init(&receiver->in_queue.qlock);
-	INIT_WORK(&receiver->in_queue.worker, lg_mx5500_receive_worker);
+	spin_lock_init(&device->in_queue.qlock);
+	INIT_WORK(&device->in_queue.worker, lg_mx5500_receive_worker);
 
-	return receiver;
+	return device;
 }
 
-static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
+static void lg_mx5500_destroy(struct lg_mx5500 *device)
 {
-	kfree(receiver);
+	if(device->hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
+		lg_mx5500_receiver_exit(device);
+	}
+	kfree(device);
 }
 
 static int lg_mx5500_hid_probe(struct hid_device *hdev,
 				const struct hid_device_id *id)
 {
-	struct lg_mx5500_receiver *receiver;
+	struct lg_mx5500 *device;
 	unsigned int connect_mask = HID_CONNECT_DEFAULT;
 	int ret;
-	u8 cmd[7];
 
-	receiver = lg_mx5500_receiver_create(hdev);
-	if(!receiver)
+	device = lg_mx5500_create(hdev);
+	if(!device)
 	{
 		hid_err(hdev, "Can't alloc device\n");
 		return -ENOMEM;
@@ -307,26 +190,26 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 		goto err_free;
 	}
 
-	cmd[0] = 0x10;
-	cmd[1] = 0xFF;
-	cmd[2] = LG_MX5500_ACTION_GET;
-	cmd[3] = 0x00;
-	cmd[4] = 0x00;
-	cmd[5] = 0x00;
-	cmd[6] = 0x00;
-	lg_mx5500_queue(receiver, &receiver->out_queue, cmd, sizeof(cmd));
+	if(hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
+		ret = lg_mx5500_receiver_init(device);
+	}
+	
+	if(ret) {
+		goto err_free;
+	}
+
 	return 0;
 err_free:
-	lg_mx5500_receiver_destroy(receiver);
+	lg_mx5500_destroy(device);
 	return ret;
 }
 
 static void lg_mx5500_hid_remove(struct hid_device *hdev)
 {
-	struct lg_mx5500_receiver *receiver = hid_get_drvdata(hdev);
+	struct lg_mx5500 *device = hid_get_drvdata(hdev);
 	
 	hid_hw_stop(hdev);
-	lg_mx5500_receiver_destroy(receiver);
+	lg_mx5500_destroy(device);
 }
 
 static const struct hid_device_id lg_mx5500_hid_devices[] = {
