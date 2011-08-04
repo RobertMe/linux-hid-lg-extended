@@ -3,7 +3,7 @@
 
 struct lg_mx5500_receiver {
 	u8 initialized;
-	u8 mode;
+	u8 max_devices;
 
 	struct lg_mx5500 *device;
 
@@ -17,44 +17,46 @@ struct lg_mx5500_receiver_handler {
 	void (*func)(struct lg_mx5500_receiver *receiver, const u8 *payload, size_t size);
 };
 
-static int lg_mx5500_receiver_update_mode(struct lg_mx5500_receiver *receiver,
+static int lg_mx5500_receiver_update_max_devices(struct lg_mx5500_receiver *receiver,
 							const u8 *buffer, size_t count)
 {
 	if(count < 6) {
-		lg_mx5500_err(receiver->device, "To few bytes to read mode");
+		lg_mx5500_err(receiver->device, "Too few bytes to set maximum number of devices");
 		return 1;
 	}
-	receiver->mode = buffer[5];
-	lg_mx5500_dbg(receiver->device, "Mode changed to 0x%02x", receiver->mode);
+	receiver->max_devices = buffer[5];
+	lg_mx5500_dbg(receiver->device, "Maximum number of devices changed to 0x%02x",
+			receiver->max_devices);
 
 	return 0;
 }
 
-static void lg_mx5500_receiver_set_mode(struct lg_mx5500_receiver *receiver, u8 mode)
+static void lg_mx5500_receiver_set_max_devices(struct lg_mx5500_receiver *receiver,
+						u8 max_devices)
 {
 	u8 cmd[7] = { 0x10, 0xFF, LG_MX5500_ACTION_SET, 0x00, 0x00, 0x00, 0x00 };
 
-	cmd[5] = mode;
+	cmd[5] = max_devices;
 	lg_mx5500_queue_out(receiver->device, cmd, sizeof(cmd));
 }
 
-static void lg_mx5500_receiver_handle_get_mode(struct lg_mx5500_receiver *receiver,
+static void lg_mx5500_receiver_handle_get_max_devices(struct lg_mx5500_receiver *receiver,
 								const u8 *buffer, size_t count)
 {
-	if(lg_mx5500_receiver_update_mode(receiver, buffer, count))
+	if(lg_mx5500_receiver_update_max_devices(receiver, buffer, count))
 		return;
 
 	if(receiver->initialized)
 		return;
 
-	if(receiver->mode != 0x03)
-		lg_mx5500_receiver_set_mode(receiver, 0x03);
+	if(receiver->max_devices != 0x03)
+		lg_mx5500_receiver_set_max_devices(receiver, 0x03);
 }
 
-static void lg_mx5500_receiver_handle_set_mode(struct lg_mx5500_receiver *receiver,
+static void lg_mx5500_receiver_handle_set_max_devices(struct lg_mx5500_receiver *receiver,
 								const u8 *buffer, size_t count)
 {
-	if(lg_mx5500_receiver_update_mode(receiver, buffer, count))
+	if(lg_mx5500_receiver_update_max_devices(receiver, buffer, count))
 		return;
 
 	if(receiver->initialized)
@@ -65,9 +67,9 @@ static void lg_mx5500_receiver_handle_set_mode(struct lg_mx5500_receiver *receiv
 
 static struct lg_mx5500_receiver_handler lg_mx5500_receiver_handlers[] = {
 	{ .action = LG_MX5500_ACTION_GET, .first = 0x00,
-		.func = lg_mx5500_receiver_handle_get_mode },
+		.func = lg_mx5500_receiver_handle_get_max_devices },
 	{ .action = LG_MX5500_ACTION_SET, .first = 0x00,
-		.func = lg_mx5500_receiver_handle_set_mode },
+		.func = lg_mx5500_receiver_handle_set_max_devices },
 	{ }
 };
 
