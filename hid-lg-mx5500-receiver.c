@@ -65,6 +65,25 @@ static void lg_mx5500_receiver_logon_device(struct lg_mx5500_receiver *receiver,
 	}
 }
 
+static void lg_mx5500_receiver_logoff_device(struct lg_mx5500_receiver *receiver,
+						const u8 *buffer, size_t count)
+{
+	switch(buffer[1]) {
+	case 0x01:
+		if(receiver->keyboard) {
+			lg_mx5500_keyboard_destroy(receiver->keyboard);
+			receiver->keyboard = NULL;
+		}
+		break;
+	case 0x02:
+		if(receiver->mouse) {
+			lg_mx5500_mouse_destroy(receiver->mouse);
+			receiver->mouse = NULL;
+		}
+		break;
+	}
+}
+
 static void lg_mx5500_receiver_devices_logon(struct lg_mx5500_receiver *receiver)
 {
 	u8 cmd[7] = { 0x10, 0xFF, LG_MX5500_ACTION_SET, 0x02, 0x02, 0x00, 0x00 };
@@ -164,6 +183,9 @@ static void lg_mx5500_receiver_hid_receive(struct lg_mx5500 *device, const u8 *b
 	}
 	else if(buffer[2] == 0x41) {
 		lg_mx5500_receiver_logon_device(lg_mx5500_get_data(device), buffer, count);
+	}
+	else if(buffer[2] == 0x40) {
+		lg_mx5500_receiver_logoff_device(lg_mx5500_get_data(device), buffer, count);
 	}
 }
 
