@@ -149,7 +149,7 @@ static struct lg_mx5500 *lg_mx5500_create(struct hid_device *hdev)
 
 	spin_lock_init(&device->out_queue.qlock);
 	INIT_WORK(&device->out_queue.worker, lg_mx5500_send_worker);
-	
+
 	spin_lock_init(&device->in_queue.qlock);
 	INIT_WORK(&device->in_queue.worker, lg_mx5500_receive_worker);
 
@@ -193,7 +193,7 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 	if(hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
 		ret = lg_mx5500_receiver_init(device);
 	}
-	
+
 	if(ret) {
 		goto err_free;
 	}
@@ -207,8 +207,12 @@ err_free:
 static void lg_mx5500_hid_remove(struct hid_device *hdev)
 {
 	struct lg_mx5500 *device = hid_get_drvdata(hdev);
-	
+
 	hid_hw_stop(hdev);
+
+	cancel_work_sync(&device->in_queue.worker);
+	cancel_work_sync(&device->out_queue.worker);
+
 	lg_mx5500_destroy(device);
 }
 
