@@ -1,4 +1,9 @@
+#include <linux/hid.h>
+#include <asm/atomic.h>
+
 #include "hid-lg-mx5500.h"
+#include "hid-lg-mx5500-keyboard.h"
+#include "hid-lg-mx5500-mouse.h"
 #include "hid-lg-mx5500-receiver.h"
 
 struct lg_mx5500_receiver {
@@ -38,6 +43,33 @@ static void lg_mx5500_receiver_set_max_devices(struct lg_mx5500_receiver *receiv
 
 	cmd[5] = max_devices;
 	lg_mx5500_queue_out(receiver->device, cmd, sizeof(cmd));
+
+	if(receiver->initialized)
+		return;
+
+	receiver->initialized = 1;
+}
+
+static void lg_mx5500_receiver_logon_device(struct lg_mx5500_receiver *receiver,
+						const u8 *buffer, size_t count)
+{
+	switch(buffer[1]) {
+	case 0x01:
+		receiver->keyboard = lg_mx5500_keyboard_create_on_receiver(
+					receiver->device, buffer, count);
+		break;
+	case 0x02:
+		receiver->mouse = lg_mx5500_mouse_create_on_receiver(
+					receiver->device, buffer, count);
+		break;
+	}
+}
+
+static void lg_mx5500_receiver_devices_logon(struct lg_mx5500_receiver *receiver)
+{
+	u8 cmd[7] = { 0x10, 0xFF, LG_MX5500_ACTION_SET, 0x02, 0x02, 0x00, 0x00 };
+
+	lg_mx5500_queue_out(receiver->device, cmd, sizeof(cmd));
 }
 
 static void lg_mx5500_receiver_handle_get_max_devices(struct lg_mx5500_receiver *receiver,
@@ -62,7 +94,7 @@ static void lg_mx5500_receiver_handle_set_max_devices(struct lg_mx5500_receiver 
 	if(receiver->initialized)
 		return;
 
-	receiver->initialized = 1;
+	lg_mx5500_receiver_devices_logon(receiver);
 }
 
 static struct lg_mx5500_receiver_handler lg_mx5500_receiver_handlers[] = {
@@ -110,6 +142,12 @@ static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct lg_mx5500 *de
 
 static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
 {
+	if(receiver->keyboard)
+		lg_mx5500_keyboard_destroy(receiver->keyboard);
+
+	if(receiver->mouse)
+		lg_mx5500_mouse_destroy(receiver->mouse);
+
 	kfree(receiver);
 }
 
@@ -123,6 +161,9 @@ static void lg_mx5500_receiver_hid_receive(struct lg_mx5500 *device, const u8 *b
 
 	if(buffer[1] == 0xFF) {
 		lg_mx5500_receiver_handle(device, buffer, count);
+	}
+	else if(buffer[2] == 0x41) {
+		lg_mx5500_receiver_logon_device(lg_mx5500_get_data(device), buffer, count);
 	}
 }
 
