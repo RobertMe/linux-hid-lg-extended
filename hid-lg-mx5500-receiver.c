@@ -102,6 +102,8 @@ static void lg_mx5500_receiver_handle_get_max_devices(struct lg_mx5500_receiver 
 
 	if(receiver->max_devices != 0x03)
 		lg_mx5500_receiver_set_max_devices(receiver, 0x03);
+	else
+		lg_mx5500_receiver_devices_logon(receiver);
 }
 
 static void lg_mx5500_receiver_handle_set_max_devices(struct lg_mx5500_receiver *receiver,
