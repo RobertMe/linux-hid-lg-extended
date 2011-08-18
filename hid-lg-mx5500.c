@@ -18,6 +18,37 @@ void *lg_mx5500_get_data(struct lg_mx5500 *device)
 	return device->data;
 }
 
+struct lg_mx5500_receiver *lg_mx5500_get_receiver(struct lg_mx5500 *device)
+{
+	struct lg_mx5500_receiver *receiver = NULL;
+	if(device->type == LG_MX5500_RECEIVER)
+		receiver = lg_mx5500_get_data(device);
+
+	return receiver;
+}
+
+struct lg_mx5500_keyboard *lg_mx5500_get_keyboard(struct lg_mx5500 *device)
+{
+	struct lg_mx5500_keyboard *keyboard = NULL;
+	if(device->type == LG_MX5500_KEYBOARD)
+		keyboard = lg_mx5500_get_data(device);
+	else if(device->type == LG_MX5500_RECEIVER)
+		keyboard = ((struct lg_mx5500_receiver*)lg_mx5500_get_receiver(device))->keyboard;
+
+	return keyboard;
+}
+
+struct lg_mx5500_mouse *lg_mx5500_get_mouse(struct lg_mx5500 *device)
+{
+	struct lg_mx5500_mouse *mouse = NULL;
+	if(device->type == LG_MX5500_MOUSE)
+		mouse = lg_mx5500_get_data(device);
+	else if(device->type == LG_MX5500_RECEIVER)
+		mouse = ((struct lg_mx5500_receiver*)lg_mx5500_get_receiver(device))->mouse;
+
+	return mouse;
+}
+
 void lg_mx5500_set_hid_receive_handler(struct lg_mx5500 *device,
 				       lg_mx5500_hid_receive_handler receive_handler)
 {

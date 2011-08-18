@@ -36,6 +36,12 @@ struct lg_mx5500_queue {
 
 struct lg_mx5500;
 
+struct lg_mx5500_receiver;
+
+struct lg_mx5500_keyboard;
+
+struct lg_mx5500_mouse;
+
 typedef void (*lg_mx5500_hid_receive_handler)(struct lg_mx5500 *device,
 					  const u8 *payload, size_t size);
 
@@ -67,5 +73,11 @@ void *lg_mx5500_get_data(struct lg_mx5500 *device);
 
 void lg_mx5500_set_hid_receive_handler(struct lg_mx5500 *device,
 					lg_mx5500_hid_receive_handler receive_handler);
+
+struct lg_mx5500_receiver *lg_mx5500_get_receiver(struct lg_mx5500 *device);
+
+struct lg_mx5500_keyboard *lg_mx5500_get_keyboard(struct lg_mx5500 *device);
+
+struct lg_mx5500_mouse *lg_mx5500_get_mouse(struct lg_mx5500 *device);
 
 #endif

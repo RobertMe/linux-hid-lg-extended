@@ -6,16 +6,6 @@
 #include "hid-lg-mx5500-mouse.h"
 #include "hid-lg-mx5500-receiver.h"
 
-struct lg_mx5500_receiver {
-	u8 initialized;
-	u8 max_devices;
-
-	struct lg_mx5500 *device;
-
-	struct lg_mx5500_keyboard *keyboard;
-	struct lg_mx5500_mouse *mouse;
-};
-
 struct lg_mx5500_receiver_handler {
 	u8 action;
 	u8 first;

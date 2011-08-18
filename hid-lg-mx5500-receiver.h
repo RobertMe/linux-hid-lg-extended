@@ -5,7 +5,15 @@
 
 #include "hid-lg-mx5500.h"
 
-struct lg_mx5500_receiver;
+struct lg_mx5500_receiver {
+	u8 initialized;
+	u8 max_devices;
+
+	struct lg_mx5500 *device;
+
+	struct lg_mx5500_keyboard *keyboard;
+	struct lg_mx5500_mouse *mouse;
+};
 
 int lg_mx5500_receiver_init(struct lg_mx5500 *device);
 
