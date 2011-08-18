@@ -15,6 +15,12 @@ enum lg_mx5500_actions {
 	LG_MX5500_ACTION_DO = 0x83,
 };
 
+enum lg_mx5500_device {
+	LG_MX5500_RECEIVER,
+	LG_MX5500_KEYBOARD,
+	LG_MX5500_MOUSE,
+};
+
 struct lg_mx5500_buf {
 	u8 data[HID_MAX_BUFFER_SIZE];
 	size_t size;
@@ -37,6 +43,7 @@ struct lg_mx5500 {
 	struct hid_device *hdev;
 
 	void *data;
+	enum lg_mx5500_device type;
 
 	struct lg_mx5500_queue out_queue;
 	struct lg_mx5500_queue in_queue;

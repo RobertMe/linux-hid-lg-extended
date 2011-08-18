@@ -191,6 +191,7 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 	}
 
 	if(hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
+		device->type = LG_MX5500_RECEIVER;
 		ret = lg_mx5500_receiver_init(device);
 	}
 
