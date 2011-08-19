@@ -120,6 +120,7 @@ void lg_mx5500_receiver_handle(struct lg_mx5500 *device, const u8 *buffer,
 								size_t count)
 {
 	int i;
+	int handeld = 0;
 	struct lg_mx5500_receiver *receiver;
 	struct lg_mx5500_receiver_handler *handler;
 
@@ -131,8 +132,12 @@ void lg_mx5500_receiver_handle(struct lg_mx5500 *device, const u8 *buffer,
 		if(handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
 			handler->func(receiver, buffer, count);
+			handeld = 1;
 		}
 	}
+
+	if(!handeld)
+		lg_mx5500_err(device, "Unhandeld receiver message %02x %02x", buffer[2], buffer[3]);
 }
 
 static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct lg_mx5500 *device)
