@@ -7,6 +7,9 @@
 
 struct lg_mx5500_keyboard;
 
+void lg_mx5500_keyboard_handle(struct lg_mx5500 *device, const u8 *buffer,
+								size_t count);
+
 struct lg_mx5500_keyboard *lg_mx5500_keyboard_create_on_receiver(
 			struct lg_mx5500 *device,
 			const u8 *buffer, size_t count);
