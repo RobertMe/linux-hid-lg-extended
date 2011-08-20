@@ -187,6 +187,9 @@ static void lg_mx5500_receiver_hid_receive(struct lg_mx5500 *device, const u8 *b
 	else if(buffer[1] == 0x01) {
 		lg_mx5500_keyboard_handle(device, buffer, count);
 	}
+	else if(buffer[1] == 0x02) {
+		lg_mx5500_mouse_handle(device, buffer, count);
+	}
 }
 
 int lg_mx5500_receiver_init(struct lg_mx5500 *device)
