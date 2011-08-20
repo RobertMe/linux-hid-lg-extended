@@ -21,7 +21,7 @@ void *lg_mx5500_get_data(struct lg_mx5500 *device)
 struct lg_mx5500_receiver *lg_mx5500_get_receiver(struct lg_mx5500 *device)
 {
 	struct lg_mx5500_receiver *receiver = NULL;
-	if(device->type == LG_MX5500_RECEIVER)
+	if (device->type == LG_MX5500_RECEIVER)
 		receiver = lg_mx5500_get_data(device);
 
 	return receiver;
@@ -30,9 +30,9 @@ struct lg_mx5500_receiver *lg_mx5500_get_receiver(struct lg_mx5500 *device)
 struct lg_mx5500_keyboard *lg_mx5500_get_keyboard(struct lg_mx5500 *device)
 {
 	struct lg_mx5500_keyboard *keyboard = NULL;
-	if(device->type == LG_MX5500_KEYBOARD)
+	if (device->type == LG_MX5500_KEYBOARD)
 		keyboard = lg_mx5500_get_data(device);
-	else if(device->type == LG_MX5500_RECEIVER)
+	else if (device->type == LG_MX5500_RECEIVER)
 		keyboard = ((struct lg_mx5500_receiver*)lg_mx5500_get_receiver(device))->keyboard;
 
 	return keyboard;
@@ -41,9 +41,9 @@ struct lg_mx5500_keyboard *lg_mx5500_get_keyboard(struct lg_mx5500 *device)
 struct lg_mx5500_mouse *lg_mx5500_get_mouse(struct lg_mx5500 *device)
 {
 	struct lg_mx5500_mouse *mouse = NULL;
-	if(device->type == LG_MX5500_MOUSE)
+	if (device->type == LG_MX5500_MOUSE)
 		mouse = lg_mx5500_get_data(device);
-	else if(device->type == LG_MX5500_RECEIVER)
+	else if (device->type == LG_MX5500_RECEIVER)
 		mouse = ((struct lg_mx5500_receiver*)lg_mx5500_get_receiver(device))->mouse;
 
 	return mouse;
@@ -137,7 +137,7 @@ void lg_mx5500_receive_worker(struct work_struct *work)
 
 	while (queue->head != queue->tail) {
 		spin_unlock_irqrestore(&queue->qlock, flags);
-		if(device->receive_handler)
+		if (device->receive_handler)
 			device->receive_handler(device, queue->queue[queue->tail].data,
 						queue->queue[queue->tail].size);
 		spin_lock_irqsave(&queue->qlock, flags);
@@ -153,10 +153,8 @@ static int lg_mx5500_event(struct hid_device *hdev, struct hid_report *report,
 {
 	struct lg_mx5500 *device;
 
-	if(report->id < 0x10)
-	{
+	if (report->id < 0x10)
 		return 0;
-	}
 
 	device = hid_get_drvdata(hdev);
 
@@ -170,7 +168,7 @@ static struct lg_mx5500 *lg_mx5500_create(struct hid_device *hdev)
 	struct lg_mx5500 *device;
 
 	device = kzalloc(sizeof(*device), GFP_KERNEL);
-	if(!device)
+	if (!device)
 		return NULL;
 
 	device->hdev = hdev;
@@ -189,9 +187,8 @@ static struct lg_mx5500 *lg_mx5500_create(struct hid_device *hdev)
 
 static void lg_mx5500_destroy(struct lg_mx5500 *device)
 {
-	if(device->hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
+	if (device->hdev->product == USB_DEVICE_ID_MX5500_RECEIVER)
 		lg_mx5500_receiver_exit(device);
-	}
 	kfree(device);
 }
 
@@ -203,8 +200,7 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 	int ret;
 
 	device = lg_mx5500_create(hdev);
-	if(!device)
-	{
+	if (!device) {
 		hid_err(hdev, "Can't alloc device\n");
 		return -ENOMEM;
 	}
@@ -221,14 +217,13 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 		goto err_free;
 	}
 
-	if(hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
+	if (hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
 		device->type = LG_MX5500_RECEIVER;
 		ret = lg_mx5500_receiver_init(device);
 	}
 
-	if(ret) {
+	if (ret)
 		goto err_free;
-	}
 
 	return 0;
 err_free:

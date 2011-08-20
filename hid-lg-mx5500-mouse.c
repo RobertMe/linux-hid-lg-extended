@@ -81,17 +81,17 @@ void lg_mx5500_mouse_handle(struct lg_mx5500 *device, const u8 *buffer,
 
 	mouse = lg_mx5500_get_mouse(device);
 
-	for(i = 0; lg_mx5500_mouse_handlers[i].action ||
+	for (i = 0; lg_mx5500_mouse_handlers[i].action ||
 		lg_mx5500_mouse_handlers[i].first; i++) {
 		handler = &lg_mx5500_mouse_handlers[i];
-		if(handler->action == buffer[2] &&
+		if (handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
 			handler->func(mouse, buffer, count);
 			handeld = 1;
 		}
 	}
 
-	if(!handeld)
+	if (!handeld)
 		lg_mx5500_err(device, "Unhandeld mouse message %02x %02x", buffer[2], buffer[3]);
 
 	wake_up_interruptible(&mouse->received);
@@ -104,7 +104,7 @@ struct lg_mx5500_mouse *lg_mx5500_mouse_create_on_receiver(
 	struct lg_mx5500_mouse *mouse;
 
 	mouse = kzalloc(sizeof(*mouse), GFP_KERNEL);
-	if(!mouse)
+	if (!mouse)
 		goto error;
 
 	mouse->device = device;
@@ -113,7 +113,7 @@ struct lg_mx5500_mouse *lg_mx5500_mouse_create_on_receiver(
 	mouse->initialized = 0;
 	init_waitqueue_head(&mouse->received);
 
-	if(sysfs_create_group(&device->hdev->dev.kobj,
+	if (sysfs_create_group(&device->hdev->dev.kobj,
 		&mouse_attr_group))
 		goto error_free;
 
@@ -127,7 +127,7 @@ error:
 
 void lg_mx5500_mouse_destroy(struct lg_mx5500_mouse *mouse)
 {
-	if(mouse == NULL)
+	if (mouse == NULL)
 		return;
 
 	sysfs_remove_group(&mouse->device->hdev->dev.kobj,

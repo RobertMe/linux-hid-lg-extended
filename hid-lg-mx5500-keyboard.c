@@ -104,17 +104,17 @@ void lg_mx5500_keyboard_handle(struct lg_mx5500 *device, const u8 *buffer,
 
 	keyboard = lg_mx5500_get_keyboard(device);
 
-	for(i = 0; lg_mx5500_keyboard_handlers[i].action ||
+	for (i = 0; lg_mx5500_keyboard_handlers[i].action ||
 		lg_mx5500_keyboard_handlers[i].first; i++) {
 		handler = &lg_mx5500_keyboard_handlers[i];
-		if(handler->action == buffer[2] &&
+		if (handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
 			handler->func(keyboard, buffer, count);
 			handeld = 1;
 		}
 	}
 
-	if(!handeld)
+	if (!handeld)
 		lg_mx5500_err(device, "Unhandeld keyboard message %02x %02x", buffer[2], buffer[3]);
 
 	wake_up_interruptible(&keyboard->received);
@@ -127,7 +127,7 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create_on_receiver(
 	struct lg_mx5500_keyboard *keyboard;
 
 	keyboard = kzalloc(sizeof(*keyboard), GFP_KERNEL);
-	if(!keyboard)
+	if (!keyboard)
 		goto error;
 
 	keyboard->device = device;
@@ -137,7 +137,7 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create_on_receiver(
 	keyboard->initialized = 0;
 	init_waitqueue_head(&keyboard->received);
 
-	if(sysfs_create_group(&device->hdev->dev.kobj,
+	if (sysfs_create_group(&device->hdev->dev.kobj,
 		&keyboard_attr_group))
 		goto error_free;
 
@@ -151,7 +151,7 @@ error:
 
 void lg_mx5500_keyboard_destroy(struct lg_mx5500_keyboard *keyboard)
 {
-	if(keyboard == NULL)
+	if (keyboard == NULL)
 		return;
 
 	sysfs_remove_group(&keyboard->device->hdev->dev.kobj,
