@@ -11,6 +11,7 @@ struct lg_mx5500_keyboard {
 
 	short battery_level;
 	short lcd_page;
+	short time[3];
 };
 
 struct lg_mx5500_keyboard_handler {
@@ -35,6 +36,18 @@ static int lg_mx5500_keyboard_request_battery(struct lg_mx5500_keyboard *keyboar
 
 	return wait_event_interruptible(keyboard->received,
 				 keyboard->battery_level >= 0);
+}
+
+static int lg_mx5500_keyboard_request_time(struct lg_mx5500_keyboard *keyboard)
+{
+	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x31, 0x00, 0x00, 0x00 };
+
+	cmd[1] = keyboard->devnum;
+	keyboard->time[0] = -1;
+	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+
+	return wait_event_interruptible(keyboard->received,
+				 keyboard->time[0] >= 0);
 }
 
 static ssize_t keyboard_show_battery(struct device *device,
@@ -62,9 +75,49 @@ static ssize_t keyboard_show_lcd_page(struct device *device,
 
 static DEVICE_ATTR(lcd_page, S_IRUGO, keyboard_show_lcd_page, NULL);
 
+static ssize_t keyboard_show_time(struct device *device,
+		struct device_attribute *attr, char *buf)
+{
+	struct lg_mx5500_keyboard *keyboard = lg_mx5500_keyboard_get_from_device(device);
+
+	if (lg_mx5500_keyboard_request_time(keyboard))
+		return 0;
+
+	return scnprintf(buf, PAGE_SIZE, "%02hi:%02hi:%02hi\n", keyboard->time[0],
+		keyboard->time[1], keyboard->time[2]);
+}
+
+static ssize_t keyboard_store_time(struct device *device,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct lg_mx5500_keyboard *keyboard;
+	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_SET, 0x31, 0x00, 0x00, 0x00 };
+	int err;
+	short second, minute, hour;
+
+	keyboard = lg_mx5500_keyboard_get_from_device(device);
+	err = sscanf(buf, "%02hi:%02hi:%02hi", &hour, &minute, &second);
+	if (err < 0)
+		return err;
+	else if (err != 3)
+		return -EINVAL;
+
+	cmd[1] = keyboard->devnum;
+	cmd[4] = second;
+	cmd[5] = minute;
+	cmd[6] = hour;
+
+	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+
+	return count;
+}
+
+static DEVICE_ATTR(time, S_IRUGO | S_IWUGO, keyboard_show_time, keyboard_store_time);
+
 static struct attribute *keyboard_attrs[] = {
 	&dev_attr_lcd_page.attr,
 	&dev_attr_battery.attr,
+	&dev_attr_time.attr,
 	NULL,
 };
 
@@ -80,6 +133,15 @@ static void keyboard_handle_get_battery(
 	keyboard->battery_level = buf[4];
 }
 
+static void keyboard_handle_get_time(
+		struct lg_mx5500_keyboard *keyboard, const u8 *buf,
+		size_t size)
+{
+	keyboard->time[0] = buf[7];
+	keyboard->time[1] = buf[6];
+	keyboard->time[2] = buf[5];
+}
+
 static void keyboard_handle_lcd_page_changed_event(
 		struct lg_mx5500_keyboard *keyboard, const u8 *buf,
 		size_t size)
@@ -92,6 +154,8 @@ static struct lg_mx5500_keyboard_handler lg_mx5500_keyboard_handlers[] = {
 		.func = keyboard_handle_lcd_page_changed_event },
 	{ .action = LG_MX5500_ACTION_GET, .first = 0x0d,
 		.func = keyboard_handle_get_battery },
+	{ .action = LG_MX5500_ACTION_GET, .first = 0x31,
+		.func = keyboard_handle_get_time },
 	{ }
 };
 
