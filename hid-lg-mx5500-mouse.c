@@ -24,7 +24,7 @@ static inline struct lg_mx5500_mouse *lg_mx5500_mouse_get_from_device(
 	return lg_mx5500_get_mouse(dev_get_drvdata(device));
 }
 
-static void lg_mx5500_mouse_request_battery(struct lg_mx5500_mouse *mouse)
+static int lg_mx5500_mouse_request_battery(struct lg_mx5500_mouse *mouse)
 {
 	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x0d, 0x00, 0x00, 0x00 };
 
@@ -32,7 +32,7 @@ static void lg_mx5500_mouse_request_battery(struct lg_mx5500_mouse *mouse)
 	mouse->battery_level = -1;
 	lg_mx5500_queue_out(mouse->device, cmd, sizeof(cmd));
 
-	wait_event_interruptible(mouse->received,
+	return wait_event_interruptible(mouse->received,
 				 mouse->battery_level >= 0);
 }
 
@@ -41,7 +41,8 @@ static ssize_t mouse_show_battery(struct device *device,
 {
 	struct lg_mx5500_mouse *mouse = lg_mx5500_mouse_get_from_device(device);
 
-	lg_mx5500_mouse_request_battery(mouse);
+	if (lg_mx5500_mouse_request_battery(mouse))
+		return 0;
 
 	return scnprintf(buf, PAGE_SIZE, "%d%%\n", mouse->battery_level);
 }

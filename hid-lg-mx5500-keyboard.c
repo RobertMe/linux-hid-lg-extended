@@ -25,7 +25,7 @@ static inline struct lg_mx5500_keyboard *lg_mx5500_keyboard_get_from_device(
 	return lg_mx5500_get_keyboard(dev_get_drvdata(device));
 }
 
-static void lg_mx5500_keyboard_request_battery(struct lg_mx5500_keyboard *keyboard)
+static int lg_mx5500_keyboard_request_battery(struct lg_mx5500_keyboard *keyboard)
 {
 	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x0d, 0x00, 0x00, 0x00 };
 
@@ -33,7 +33,7 @@ static void lg_mx5500_keyboard_request_battery(struct lg_mx5500_keyboard *keyboa
 	keyboard->battery_level = -1;
 	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
 
-	wait_event_interruptible(keyboard->received,
+	return wait_event_interruptible(keyboard->received,
 				 keyboard->battery_level >= 0);
 }
 
@@ -42,7 +42,8 @@ static ssize_t keyboard_show_battery(struct device *device,
 {
 	struct lg_mx5500_keyboard *keyboard = lg_mx5500_keyboard_get_from_device(device);
 
-	lg_mx5500_keyboard_request_battery(keyboard);
+	if (lg_mx5500_keyboard_request_battery(keyboard))
+		return 0;
 
 	return scnprintf(buf, PAGE_SIZE, "%d%%\n", keyboard->battery_level);
 }
