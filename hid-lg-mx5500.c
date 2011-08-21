@@ -4,10 +4,12 @@
 
 #include "hid-lg-mx5500.h"
 #include "hid-lg-mx5500-receiver.h"
+#include "hid-lg-mx5500-keyboard.h"
 #include "hid-lg-mx5500-mouse.h"
 
 #define USB_VENDOR_ID_LOGITECH          0x046d
 #define USB_DEVICE_ID_MX5500_RECEIVER   0xc71c
+#define USB_DEVICE_ID_MX5500_KEYBOARD   0xb30b
 #define USB_DEVICE_ID_MX5500_MOUSE      0xb007
 
 void lg_mx5500_set_data(struct lg_mx5500 *device, void *data)
@@ -191,6 +193,8 @@ static void lg_mx5500_destroy(struct lg_mx5500 *device)
 {
 	if (device->hdev->product == USB_DEVICE_ID_MX5500_RECEIVER)
 		lg_mx5500_receiver_exit(device);
+	else if (device->hdev->product == USB_DEVICE_ID_MX5500_KEYBOARD)
+		lg_mx5500_keyboard_exit(device);
 	else if (device->hdev->product == USB_DEVICE_ID_MX5500_MOUSE)
 		lg_mx5500_mouse_exit(device);
 	kfree(device);
@@ -224,6 +228,9 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 	if (hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
 		device->type = LG_MX5500_RECEIVER;
 		ret = lg_mx5500_receiver_init(device);
+	} else if (hdev->product == USB_DEVICE_ID_MX5500_KEYBOARD) {
+		device->type = LG_MX5500_KEYBOARD;
+		ret = lg_mx5500_keyboard_init(device);
 	} else if (hdev->product == USB_DEVICE_ID_MX5500_MOUSE) {
 		device->type = LG_MX5500_MOUSE;
 		ret = lg_mx5500_mouse_init(device);
@@ -253,6 +260,8 @@ static void lg_mx5500_hid_remove(struct hid_device *hdev)
 static const struct hid_device_id lg_mx5500_hid_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_RECEIVER) },
+	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_KEYBOARD) },
 	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_MOUSE) },
 	{ }

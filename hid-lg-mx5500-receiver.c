@@ -45,7 +45,7 @@ static void lg_mx5500_receiver_logon_device(struct lg_mx5500_receiver *receiver,
 {
 	switch (buffer[1]) {
 	case 0x01:
-		receiver->keyboard = lg_mx5500_keyboard_create_on_receiver(
+		receiver->keyboard = lg_mx5500_keyboard_init_on_receiver(
 					receiver->device, buffer, count);
 		break;
 	case 0x02:
@@ -61,7 +61,7 @@ static void lg_mx5500_receiver_logoff_device(struct lg_mx5500_receiver *receiver
 	switch (buffer[1]) {
 	case 0x01:
 		if (receiver->keyboard) {
-			lg_mx5500_keyboard_destroy(receiver->keyboard);
+			lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
 			receiver->keyboard = NULL;
 		}
 		break;
@@ -159,7 +159,7 @@ static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct lg_mx5500 *de
 static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
 {
 	if (receiver->keyboard)
-		lg_mx5500_keyboard_destroy(receiver->keyboard);
+		lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
 
 	if (receiver->mouse)
 		lg_mx5500_mouse_exit_on_receiver(receiver->mouse);
