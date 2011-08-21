@@ -98,40 +98,101 @@ void lg_mx5500_mouse_handle(struct lg_mx5500 *device, const u8 *buffer,
 	wake_up_interruptible(&mouse->received);
 }
 
-struct lg_mx5500_mouse *lg_mx5500_mouse_create_on_receiver(
-			struct lg_mx5500 *device,
-			const u8 *buffer, size_t count)
+struct lg_mx5500_mouse *lg_mx5500_mouse_create(struct lg_mx5500 *device)
 {
 	struct lg_mx5500_mouse *mouse;
 
 	mouse = kzalloc(sizeof(*mouse), GFP_KERNEL);
 	if (!mouse)
-		goto error;
+		return NULL;
 
 	mouse->device = device;
-	mouse->devnum = buffer[1];
+	mouse->devnum = 1;
 	mouse->battery_level = -1;
 	mouse->initialized = 0;
 	init_waitqueue_head(&mouse->received);
+
+	return mouse;
+}
+
+void lg_mx5500_mouse_destroy(struct lg_mx5500_mouse *mouse)
+{
+	if (!mouse)
+		return;
+
+	kfree(mouse);
+}
+
+int lg_mx5500_mouse_init(struct lg_mx5500 *device)
+{
+	int ret;
+	struct lg_mx5500_mouse *mouse;
+
+	mouse = lg_mx5500_mouse_create(device);
+	if (!mouse) {
+		ret = -ENOMEM;
+		goto error;
+	}
+
+	ret = sysfs_create_files(&device->hdev->dev.kobj,
+		(const struct attribute**)mouse_attrs);
+	if (ret)
+		goto error_free;
+
+	lg_mx5500_set_data(device, mouse);
+	lg_mx5500_set_hid_receive_handler(device, lg_mx5500_mouse_handle);
+
+	return ret;
+error_free:
+	kfree(mouse);
+error:
+	return ret;
+}
+
+void lg_mx5500_mouse_exit(struct lg_mx5500 *device)
+{
+	struct lg_mx5500_mouse *mouse;
+
+	mouse = lg_mx5500_get_mouse(device);
+
+	if (mouse == NULL)
+		return;
+
+	sysfs_remove_files(&device->hdev->dev.kobj,
+		(const struct attribute **)mouse_attrs);
+
+	lg_mx5500_mouse_destroy(mouse);
+}
+
+struct lg_mx5500_mouse *lg_mx5500_mouse_init_on_receiver(
+			struct lg_mx5500 *device,
+			const u8 *buffer, size_t count)
+{
+	struct lg_mx5500_mouse *mouse;
+
+	mouse = lg_mx5500_mouse_create(device);
+	if (!mouse)
+		goto error;
+
+	mouse->devnum = buffer[1];
 
 	if (sysfs_create_group(&device->hdev->dev.kobj,
 		&mouse_attr_group))
 		goto error_free;
 
 	return mouse;
-
 error_free:
 	kfree(mouse);
 error:
 	return NULL;
 }
 
-void lg_mx5500_mouse_destroy(struct lg_mx5500_mouse *mouse)
+void lg_mx5500_mouse_exit_on_receiver(struct lg_mx5500_mouse *mouse)
 {
 	if (mouse == NULL)
 		return;
 
 	sysfs_remove_group(&mouse->device->hdev->dev.kobj,
 				&mouse_attr_group);
-	kfree(mouse);
+	lg_mx5500_mouse_destroy(mouse);
 }
