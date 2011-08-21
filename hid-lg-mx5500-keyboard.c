@@ -12,6 +12,7 @@ struct lg_mx5500_keyboard {
 	short battery_level;
 	short lcd_page;
 	short time[3];
+	short date[3];
 };
 
 struct lg_mx5500_keyboard_handler {
@@ -48,6 +49,21 @@ static int lg_mx5500_keyboard_request_time(struct lg_mx5500_keyboard *keyboard)
 
 	return wait_event_interruptible(keyboard->received,
 				 keyboard->time[0] >= 0);
+}
+
+static int lg_mx5500_keyboard_request_date(struct lg_mx5500_keyboard *keyboard)
+{
+	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x32, 0x00, 0x00, 0x00 };
+
+	cmd[1] = keyboard->devnum;
+	keyboard->date[0] = -1;
+	keyboard->date[1] = -1;
+	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+	cmd[3] = 0x33;
+	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+
+	return wait_event_interruptible(keyboard->received,
+				 keyboard->date[0] >= 0 && keyboard->date[1] >= 0);
 }
 
 static ssize_t keyboard_show_battery(struct device *device,
@@ -114,10 +130,58 @@ static ssize_t keyboard_store_time(struct device *device,
 
 static DEVICE_ATTR(time, S_IRUGO | S_IWUGO, keyboard_show_time, keyboard_store_time);
 
+static ssize_t keyboard_show_date(struct device *device,
+		struct device_attribute *attr, char *buf)
+{
+	struct lg_mx5500_keyboard *keyboard = lg_mx5500_keyboard_get_from_device(device);
+
+	if (lg_mx5500_keyboard_request_date(keyboard))
+		return 0;
+
+	return scnprintf(buf, PAGE_SIZE, "20%02hi %hi %hi\n", keyboard->date[0],
+		keyboard->date[1] + 1, keyboard->date[2]);
+}
+
+static ssize_t keyboard_store_date(struct device *device,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct lg_mx5500_keyboard *keyboard;
+	u8 cmd_day[7] = { 0x10, 0x01, LG_MX5500_ACTION_SET, 0x32, 0x06, 0x00, 0x00 };
+	u8 cmd_year[7] = { 0x10, 0x01, LG_MX5500_ACTION_SET, 0x33, 0x00, 0x00, 0x00 };
+	int err;
+	short day, month, year;
+
+	keyboard = lg_mx5500_keyboard_get_from_device(device);
+	err = sscanf(buf, "%02hi %02hi %02hi", &year, &month, &day);
+	if (err < 0)
+		return err;
+	else if (err != 3)
+		return -EINVAL;
+
+	if (year > 2000)
+		year -= 2000;
+	month--;
+
+	cmd_year[1] = keyboard->devnum;
+	cmd_year[4] = year;
+
+	cmd_day[1] = keyboard->devnum;
+	cmd_day[5] = day;
+	cmd_day[6] = month;
+
+	lg_mx5500_queue_out(keyboard->device, cmd_year, sizeof(cmd_year));
+	lg_mx5500_queue_out(keyboard->device, cmd_day, sizeof(cmd_day));
+
+	return count;
+}
+
+static DEVICE_ATTR(date, S_IRUGO | S_IWUGO, keyboard_show_date, keyboard_store_date);
+
 static struct attribute *keyboard_attrs[] = {
 	&dev_attr_lcd_page.attr,
 	&dev_attr_battery.attr,
 	&dev_attr_time.attr,
+	&dev_attr_date.attr,
 	NULL,
 };
 
@@ -142,6 +206,21 @@ static void keyboard_handle_get_time(
 	keyboard->time[2] = buf[5];
 }
 
+static void keyboard_handle_get_date_day(
+		struct lg_mx5500_keyboard *keyboard, const u8 *buf,
+		size_t size)
+{
+	keyboard->date[1] = buf[6];
+	keyboard->date[2] = buf[5];
+}
+
+static void keyboard_handle_get_date_year(
+		struct lg_mx5500_keyboard *keyboard, const u8 *buf,
+		size_t size)
+{
+	keyboard->date[0] = buf[4];
+}
+
 static void keyboard_handle_lcd_page_changed_event(
 		struct lg_mx5500_keyboard *keyboard, const u8 *buf,
 		size_t size)
@@ -156,6 +235,10 @@ static struct lg_mx5500_keyboard_handler lg_mx5500_keyboard_handlers[] = {
 		.func = keyboard_handle_get_battery },
 	{ .action = LG_MX5500_ACTION_GET, .first = 0x31,
 		.func = keyboard_handle_get_time },
+	{ .action = LG_MX5500_ACTION_GET, .first = 0x32,
+		.func = keyboard_handle_get_date_day },
+	{ .action = LG_MX5500_ACTION_GET, .first = 0x33,
+		.func = keyboard_handle_get_date_year },
 	{ }
 };
 
