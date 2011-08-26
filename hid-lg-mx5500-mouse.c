@@ -235,7 +235,8 @@ void lg_mx5500_mouse_handle(struct lg_mx5500 *device, const u8 *buffer,
 		handler = &lg_mx5500_mouse_handlers[i];
 		if (handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
-			handler->func(mouse, buffer, count);
+			if (handler->func != LG_MX5500_HANDLER_IGNORE)
+				handler->func(mouse, buffer, count);
 			handeld = 1;
 		}
 	}

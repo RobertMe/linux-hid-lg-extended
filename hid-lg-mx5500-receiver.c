@@ -113,6 +113,8 @@ static struct lg_mx5500_receiver_handler lg_mx5500_receiver_handlers[] = {
 		.func = lg_mx5500_receiver_handle_get_max_devices },
 	{ .action = LG_MX5500_ACTION_SET, .first = 0x00,
 		.func = lg_mx5500_receiver_handle_set_max_devices },
+	{ .action = LG_MX5500_ACTION_SET, .first = 0x02,
+		.func = LG_MX5500_HANDLER_IGNORE },
 	{ }
 };
 
@@ -131,7 +133,8 @@ void lg_mx5500_receiver_handle(struct lg_mx5500 *device, const u8 *buffer,
 		handler = &lg_mx5500_receiver_handlers[i];
 		if (handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
-			handler->func(receiver, buffer, count);
+			if (handler->func != LG_MX5500_HANDLER_IGNORE)
+				handler->func(receiver, buffer, count);
 			handeld = 1;
 		}
 	}

@@ -6,6 +6,8 @@
 
 #define LG_MX5500_BUFSIZE 32
 
+#define LG_MX5500_HANDLER_IGNORE NULL
+
 #define lg_mx5500_err(device, fmt, arg...) hid_err(device->hdev, fmt, ##arg)
 #define lg_mx5500_dbg(device, fmt, arg...) hid_dbg(device->hdev, fmt, ##arg)
 
