@@ -1,9 +1,9 @@
 #include <linux/hid.h>
 #include <asm/atomic.h>
 
+#include "hid-lg-mx-revolution.h"
 #include "hid-lg-mx5500.h"
 #include "hid-lg-mx5500-keyboard.h"
-#include "hid-lg-mx5500-mouse.h"
 #include "hid-lg-mx5500-receiver.h"
 
 struct lg_mx5500_receiver_handler {
@@ -49,7 +49,7 @@ static void lg_mx5500_receiver_logon_device(struct lg_mx5500_receiver *receiver,
 					receiver->device, buffer, count);
 		break;
 	case 0x02:
-		receiver->mouse = lg_mx5500_mouse_init_on_receiver(
+		receiver->mouse = lg_mx_revolution_init_on_receiver(
 					receiver->device, buffer, count);
 		break;
 	}
@@ -67,7 +67,7 @@ static void lg_mx5500_receiver_logoff_device(struct lg_mx5500_receiver *receiver
 		break;
 	case 0x02:
 		if (receiver->mouse) {
-			lg_mx5500_mouse_exit_on_receiver(receiver->mouse);
+			lg_mx_revolution_exit_on_receiver(receiver->mouse);
 			receiver->mouse = NULL;
 		}
 		break;
@@ -165,7 +165,7 @@ static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
 		lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
 
 	if (receiver->mouse)
-		lg_mx5500_mouse_exit_on_receiver(receiver->mouse);
+		lg_mx_revolution_exit_on_receiver(receiver->mouse);
 
 	kfree(receiver);
 }
@@ -187,7 +187,7 @@ static void lg_mx5500_receiver_hid_receive(struct lg_mx5500 *device, const u8 *b
 	else if (buffer[1] == 0x01)
 		lg_mx5500_keyboard_handle(device, buffer, count);
 	else if (buffer[1] == 0x02)
-		lg_mx5500_mouse_handle(device, buffer, count);
+		lg_mx_revolution_handle(device, buffer, count);
 }
 
 int lg_mx5500_receiver_init(struct lg_mx5500 *device)

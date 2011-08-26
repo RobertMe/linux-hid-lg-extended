@@ -12,7 +12,7 @@ struct lg_mx5500_receiver {
 	struct lg_mx5500 *device;
 
 	struct lg_mx5500_keyboard *keyboard;
-	struct lg_mx5500_mouse *mouse;
+	struct lg_mx_revolution *mouse;
 };
 
 int lg_mx5500_receiver_init(struct lg_mx5500 *device);

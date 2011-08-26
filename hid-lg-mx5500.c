@@ -2,10 +2,10 @@
 #include <linux/module.h>
 #include <linux/spinlock.h>
 
+#include "hid-lg-mx-revolution.h"
 #include "hid-lg-mx5500.h"
 #include "hid-lg-mx5500-receiver.h"
 #include "hid-lg-mx5500-keyboard.h"
-#include "hid-lg-mx5500-mouse.h"
 
 #define USB_VENDOR_ID_LOGITECH          0x046d
 #define USB_DEVICE_ID_MX5500_RECEIVER   0xc71c
@@ -42,9 +42,9 @@ struct lg_mx5500_keyboard *lg_mx5500_get_keyboard(struct lg_mx5500 *device)
 	return keyboard;
 }
 
-struct lg_mx5500_mouse *lg_mx5500_get_mouse(struct lg_mx5500 *device)
+struct lg_mx_revolution *lg_mx5500_get_mouse(struct lg_mx5500 *device)
 {
-	struct lg_mx5500_mouse *mouse = NULL;
+	struct lg_mx_revolution *mouse = NULL;
 	if (device->type == LG_MX5500_MOUSE)
 		mouse = lg_mx5500_get_data(device);
 	else if (device->type == LG_MX5500_RECEIVER)
@@ -196,7 +196,7 @@ static void lg_mx5500_destroy(struct lg_mx5500 *device)
 	else if (device->hdev->product == USB_DEVICE_ID_MX5500_KEYBOARD)
 		lg_mx5500_keyboard_exit(device);
 	else if (device->hdev->product == USB_DEVICE_ID_MX5500_MOUSE)
-		lg_mx5500_mouse_exit(device);
+		lg_mx_revolution_exit(device);
 	kfree(device);
 }
 
@@ -233,7 +233,7 @@ static int lg_mx5500_hid_probe(struct hid_device *hdev,
 		ret = lg_mx5500_keyboard_init(device);
 	} else if (hdev->product == USB_DEVICE_ID_MX5500_MOUSE) {
 		device->type = LG_MX5500_MOUSE;
-		ret = lg_mx5500_mouse_init(device);
+		ret = lg_mx_revolution_init(device);
 	}
 
 	if (ret)

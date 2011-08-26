@@ -1,4 +1,4 @@
-hid-logitech-mx5500-y	:= hid-lg-mx5500.o hid-lg-mx5500-receiver.o hid-lg-mx5500-keyboard.o hid-lg-mx5500-mouse.o
+hid-logitech-mx5500-y	:= hid-lg-mx5500.o hid-lg-mx5500-receiver.o hid-lg-mx5500-keyboard.o hid-lg-mx-revolution.o
 
 obj-m := hid-logitech-mx5500.o
 
