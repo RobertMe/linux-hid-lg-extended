@@ -4,7 +4,7 @@
 #include "hid-lg-mx5500-keyboard.h"
 
 struct lg_mx5500_keyboard {
-	struct lg_mx5500 *device;
+	struct lg_device *device;
 	wait_queue_head_t received;
 	u8 devnum;
 	u8 initialized;
@@ -24,16 +24,16 @@ struct lg_mx5500_keyboard_handler {
 static inline struct lg_mx5500_keyboard *lg_mx5500_keyboard_get_from_device(
 			struct device *device)
 {
-	return lg_mx5500_get_keyboard(dev_get_drvdata(device));
+	return lg_device_get_keyboard(dev_get_drvdata(device));
 }
 
 static int lg_mx5500_keyboard_request_battery(struct lg_mx5500_keyboard *keyboard)
 {
-	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x0d, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0x01, LG_DEVICE_ACTION_GET, 0x0d, 0x00, 0x00, 0x00 };
 
 	cmd[1] = keyboard->devnum;
 	keyboard->battery_level = -1;
-	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+	lg_device_queue_out(keyboard->device, cmd, sizeof(cmd));
 
 	return wait_event_interruptible(keyboard->received,
 				 keyboard->battery_level >= 0);
@@ -41,11 +41,11 @@ static int lg_mx5500_keyboard_request_battery(struct lg_mx5500_keyboard *keyboar
 
 static int lg_mx5500_keyboard_request_time(struct lg_mx5500_keyboard *keyboard)
 {
-	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x31, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0x01, LG_DEVICE_ACTION_GET, 0x31, 0x00, 0x00, 0x00 };
 
 	cmd[1] = keyboard->devnum;
 	keyboard->time[0] = -1;
-	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+	lg_device_queue_out(keyboard->device, cmd, sizeof(cmd));
 
 	return wait_event_interruptible(keyboard->received,
 				 keyboard->time[0] >= 0);
@@ -53,14 +53,14 @@ static int lg_mx5500_keyboard_request_time(struct lg_mx5500_keyboard *keyboard)
 
 static int lg_mx5500_keyboard_request_date(struct lg_mx5500_keyboard *keyboard)
 {
-	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x32, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0x01, LG_DEVICE_ACTION_GET, 0x32, 0x00, 0x00, 0x00 };
 
 	cmd[1] = keyboard->devnum;
 	keyboard->date[0] = -1;
 	keyboard->date[1] = -1;
-	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+	lg_device_queue_out(keyboard->device, cmd, sizeof(cmd));
 	cmd[3] = 0x33;
-	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+	lg_device_queue_out(keyboard->device, cmd, sizeof(cmd));
 
 	return wait_event_interruptible(keyboard->received,
 				 keyboard->date[0] >= 0 && keyboard->date[1] >= 0);
@@ -107,7 +107,7 @@ static ssize_t keyboard_store_time(struct device *device,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct lg_mx5500_keyboard *keyboard;
-	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_SET, 0x31, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0x01, LG_DEVICE_ACTION_SET, 0x31, 0x00, 0x00, 0x00 };
 	int err;
 	short second, minute, hour;
 
@@ -123,7 +123,7 @@ static ssize_t keyboard_store_time(struct device *device,
 	cmd[5] = minute;
 	cmd[6] = hour;
 
-	lg_mx5500_queue_out(keyboard->device, cmd, sizeof(cmd));
+	lg_device_queue_out(keyboard->device, cmd, sizeof(cmd));
 
 	return count;
 }
@@ -146,8 +146,8 @@ static ssize_t keyboard_store_date(struct device *device,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct lg_mx5500_keyboard *keyboard;
-	u8 cmd_day[7] = { 0x10, 0x01, LG_MX5500_ACTION_SET, 0x32, 0x06, 0x00, 0x00 };
-	u8 cmd_year[7] = { 0x10, 0x01, LG_MX5500_ACTION_SET, 0x33, 0x00, 0x00, 0x00 };
+	u8 cmd_day[7] = { 0x10, 0x01, LG_DEVICE_ACTION_SET, 0x32, 0x06, 0x00, 0x00 };
+	u8 cmd_year[7] = { 0x10, 0x01, LG_DEVICE_ACTION_SET, 0x33, 0x00, 0x00, 0x00 };
 	int err;
 	short day, month, year;
 
@@ -169,8 +169,8 @@ static ssize_t keyboard_store_date(struct device *device,
 	cmd_day[5] = day;
 	cmd_day[6] = month;
 
-	lg_mx5500_queue_out(keyboard->device, cmd_year, sizeof(cmd_year));
-	lg_mx5500_queue_out(keyboard->device, cmd_day, sizeof(cmd_day));
+	lg_device_queue_out(keyboard->device, cmd_year, sizeof(cmd_year));
+	lg_device_queue_out(keyboard->device, cmd_day, sizeof(cmd_day));
 
 	return count;
 }
@@ -231,18 +231,18 @@ static void keyboard_handle_lcd_page_changed_event(
 static struct lg_mx5500_keyboard_handler lg_mx5500_keyboard_handlers[] = {
 	{ .action = 0x0b, .first = 0x00,
 		.func = keyboard_handle_lcd_page_changed_event },
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x0d,
+	{ .action = LG_DEVICE_ACTION_GET, .first = 0x0d,
 		.func = keyboard_handle_get_battery },
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x31,
+	{ .action = LG_DEVICE_ACTION_GET, .first = 0x31,
 		.func = keyboard_handle_get_time },
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x32,
+	{ .action = LG_DEVICE_ACTION_GET, .first = 0x32,
 		.func = keyboard_handle_get_date_day },
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x33,
+	{ .action = LG_DEVICE_ACTION_GET, .first = 0x33,
 		.func = keyboard_handle_get_date_year },
 	{ }
 };
 
-void lg_mx5500_keyboard_handle(struct lg_mx5500 *device, const u8 *buffer,
+void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
 								size_t count)
 {
 	int i;
@@ -250,26 +250,26 @@ void lg_mx5500_keyboard_handle(struct lg_mx5500 *device, const u8 *buffer,
 	struct lg_mx5500_keyboard *keyboard;
 	struct lg_mx5500_keyboard_handler *handler;
 
-	keyboard = lg_mx5500_get_keyboard(device);
+	keyboard = lg_device_get_keyboard(device);
 
 	for (i = 0; lg_mx5500_keyboard_handlers[i].action ||
 		lg_mx5500_keyboard_handlers[i].first; i++) {
 		handler = &lg_mx5500_keyboard_handlers[i];
 		if (handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
-			if (handler->func != LG_MX5500_HANDLER_IGNORE)
+			if (handler->func != LG_DEVICE_HANDLER_IGNORE)
 				handler->func(keyboard, buffer, count);
 			handeld = 1;
 		}
 	}
 
 	if (!handeld)
-		lg_mx5500_err(device, "Unhandeld keyboard message %02x %02x", buffer[2], buffer[3]);
+		lg_device_err(device, "Unhandeld keyboard message %02x %02x", buffer[2], buffer[3]);
 
 	wake_up_interruptible(&keyboard->received);
 }
 
-struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_mx5500 *device)
+struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_device *device)
 {
 	struct lg_mx5500_keyboard *keyboard;
 
@@ -287,7 +287,7 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_mx5500 *device)
 	return keyboard;
 }
 
-int lg_mx5500_keyboard_init(struct lg_mx5500 *device)
+int lg_mx5500_keyboard_init(struct lg_device *device)
 {
 	int ret;
 	struct lg_mx5500_keyboard *keyboard;
@@ -303,8 +303,8 @@ int lg_mx5500_keyboard_init(struct lg_mx5500 *device)
 	if (ret)
 		goto error_free;
 
-	lg_mx5500_set_data(device, keyboard);
-	lg_mx5500_set_hid_receive_handler(device, lg_mx5500_keyboard_handle);
+	lg_device_set_data(device, keyboard);
+	lg_device_set_hid_receive_handler(device, lg_mx5500_keyboard_handle);
 
 	return ret;
 error_free:
@@ -321,11 +321,11 @@ void lg_mx5500_keyboard_destroy(struct lg_mx5500_keyboard *keyboard)
 	kfree(keyboard);
 }
 
-void lg_mx5500_keyboard_exit(struct lg_mx5500 *device)
+void lg_mx5500_keyboard_exit(struct lg_device *device)
 {
 	struct lg_mx5500_keyboard *keyboard;
 
-	keyboard = lg_mx5500_get_keyboard(device);
+	keyboard = lg_device_get_keyboard(device);
 
 	if (keyboard == NULL)
 		return;
@@ -337,7 +337,7 @@ void lg_mx5500_keyboard_exit(struct lg_mx5500 *device)
 }
 
 struct lg_mx5500_keyboard *lg_mx5500_keyboard_init_on_receiver(
-			struct lg_mx5500 *device,
+			struct lg_device *device,
 			const u8 *buffer, size_t count)
 {
 	struct lg_mx5500_keyboard *keyboard;

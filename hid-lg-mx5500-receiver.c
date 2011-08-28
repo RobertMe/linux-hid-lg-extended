@@ -2,7 +2,6 @@
 #include <asm/atomic.h>
 
 #include "hid-lg-mx-revolution.h"
-#include "hid-lg-mx5500.h"
 #include "hid-lg-mx5500-keyboard.h"
 #include "hid-lg-mx5500-receiver.h"
 
@@ -16,11 +15,11 @@ static int lg_mx5500_receiver_update_max_devices(struct lg_mx5500_receiver *rece
 							const u8 *buffer, size_t count)
 {
 	if (count < 6) {
-		lg_mx5500_err(receiver->device, "Too few bytes to set maximum number of devices");
+		lg_device_err(receiver->device, "Too few bytes to set maximum number of devices");
 		return 1;
 	}
 	receiver->max_devices = buffer[5];
-	lg_mx5500_dbg(receiver->device, "Maximum number of devices changed to 0x%02x",
+	lg_device_dbg(receiver->device, "Maximum number of devices changed to 0x%02x",
 			receiver->max_devices);
 
 	return 0;
@@ -29,10 +28,10 @@ static int lg_mx5500_receiver_update_max_devices(struct lg_mx5500_receiver *rece
 static void lg_mx5500_receiver_set_max_devices(struct lg_mx5500_receiver *receiver,
 						u8 max_devices)
 {
-	u8 cmd[7] = { 0x10, 0xFF, LG_MX5500_ACTION_SET, 0x00, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0xFF, LG_DEVICE_ACTION_SET, 0x00, 0x00, 0x00, 0x00 };
 
 	cmd[5] = max_devices;
-	lg_mx5500_queue_out(receiver->device, cmd, sizeof(cmd));
+	lg_device_queue_out(receiver->device, cmd, sizeof(cmd));
 
 	if (receiver->initialized)
 		return;
@@ -82,9 +81,9 @@ static void lg_mx5500_receiver_logoff_device(struct lg_mx5500_receiver *receiver
 
 static void lg_mx5500_receiver_devices_logon(struct lg_mx5500_receiver *receiver)
 {
-	u8 cmd[7] = { 0x10, 0xFF, LG_MX5500_ACTION_SET, 0x02, 0x02, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0xFF, LG_DEVICE_ACTION_SET, 0x02, 0x02, 0x00, 0x00 };
 
-	lg_mx5500_queue_out(receiver->device, cmd, sizeof(cmd));
+	lg_device_queue_out(receiver->device, cmd, sizeof(cmd));
 }
 
 static void lg_mx5500_receiver_handle_get_max_devices(struct lg_mx5500_receiver *receiver,
@@ -115,16 +114,16 @@ static void lg_mx5500_receiver_handle_set_max_devices(struct lg_mx5500_receiver 
 }
 
 static struct lg_mx5500_receiver_handler lg_mx5500_receiver_handlers[] = {
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x00,
+	{ .action = LG_DEVICE_ACTION_GET, .first = 0x00,
 		.func = lg_mx5500_receiver_handle_get_max_devices },
-	{ .action = LG_MX5500_ACTION_SET, .first = 0x00,
+	{ .action = LG_DEVICE_ACTION_SET, .first = 0x00,
 		.func = lg_mx5500_receiver_handle_set_max_devices },
-	{ .action = LG_MX5500_ACTION_SET, .first = 0x02,
-		.func = LG_MX5500_HANDLER_IGNORE },
+	{ .action = LG_DEVICE_ACTION_SET, .first = 0x02,
+		.func = LG_DEVICE_HANDLER_IGNORE },
 	{ }
 };
 
-void lg_mx5500_receiver_handle(struct lg_mx5500 *device, const u8 *buffer,
+void lg_mx5500_receiver_handle(struct lg_device *device, const u8 *buffer,
 								size_t count)
 {
 	int i;
@@ -132,24 +131,24 @@ void lg_mx5500_receiver_handle(struct lg_mx5500 *device, const u8 *buffer,
 	struct lg_mx5500_receiver *receiver;
 	struct lg_mx5500_receiver_handler *handler;
 
-	receiver = lg_mx5500_get_data(device);
+	receiver = lg_device_get_receiver(device);
 
 	for (i = 0; lg_mx5500_receiver_handlers[i].action ||
 		lg_mx5500_receiver_handlers[i].first; i++) {
 		handler = &lg_mx5500_receiver_handlers[i];
 		if (handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
-			if (handler->func != LG_MX5500_HANDLER_IGNORE)
+			if (handler->func != LG_DEVICE_HANDLER_IGNORE)
 				handler->func(receiver, buffer, count);
 			handeld = 1;
 		}
 	}
 
 	if (!handeld)
-		lg_mx5500_err(device, "Unhandeld receiver message %02x %02x", buffer[2], buffer[3]);
+		lg_device_err(device, "Unhandeld receiver message %02x %02x", buffer[2], buffer[3]);
 }
 
-static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct lg_mx5500 *device)
+static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct lg_device *device)
 {
 	struct lg_mx5500_receiver *receiver;
 
@@ -176,49 +175,69 @@ static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
 	kfree(receiver);
 }
 
-static void lg_mx5500_receiver_hid_receive(struct lg_mx5500 *device, const u8 *buffer,
+static void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
 								size_t count)
 {
+	struct lg_mx5500_receiver *receiver;
+
 	if (count < 4) {
-		lg_mx5500_err(device, "Too few bytes to handle");
+		lg_device_err(device, "Too few bytes to handle");
 		return;
 	}
 
-	if (buffer[1] == 0xFF)
+	receiver = lg_device_get_receiver(device);
+
+	if(!receiver)
+		return;
+
+	if (buffer[1] == 0xFF) {
 		lg_mx5500_receiver_handle(device, buffer, count);
-	else if (buffer[2] == 0x41)
-		lg_mx5500_receiver_logon_device(lg_mx5500_get_data(device), buffer, count);
-	else if (buffer[2] == 0x40)
-		lg_mx5500_receiver_logoff_device(lg_mx5500_get_data(device), buffer, count);
-	else if (buffer[1] == 0x01)
-		lg_mx5500_keyboard_handle(device, buffer, count);
-	else if (buffer[1] == 0x02)
-		lg_mx_revolution_handle(device, buffer, count);
+	} else if (buffer[2] == 0x41) {
+		lg_mx5500_receiver_logon_device(receiver, buffer, count);
+	} else if (buffer[2] == 0x40) {
+		lg_mx5500_receiver_logoff_device(receiver, buffer, count);
+	} else if (buffer[1] == 0x01) {
+		if (receiver->keyboard)
+			lg_mx5500_keyboard_handle(device, buffer, count);
+		else
+			lg_device_err(device, "received message for keyboard,"
+				"but there isn't any present.\n"
+				"message is 0x%02x 0x%02x 0x%02x",
+				buffer[2], buffer[3], buffer[4]);
+	} else if (buffer[1] == 0x02) {
+		if (receiver->mouse)
+			lg_mx_revolution_handle(device, buffer, count);
+		else
+			lg_device_err(device, "received message for mouse,"
+				"but there isn't any present.\n"
+				"message is 0x%02x 0x%02x 0x%02x",
+				buffer[2], buffer[3], buffer[4]);
+	}
 }
 
-int lg_mx5500_receiver_init(struct lg_mx5500 *device)
+int lg_mx5500_receiver_init(struct lg_device *device)
 {
 	struct lg_mx5500_receiver *receiver;
-	u8 cmd[7] = { 0x10, 0xFF, LG_MX5500_ACTION_GET, 0x00, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0xFF, LG_DEVICE_ACTION_GET, 0x00, 0x00, 0x00, 0x00 };
 
 	receiver = lg_mx5500_receiver_create(device);
 
 	if (!receiver) {
-		lg_mx5500_err(device, "Can't alloc device\n");
+		lg_device_err(device, "Can't alloc device\n");
 		return -ENOMEM;
 	}
 
-	lg_mx5500_set_data(device, receiver);
-	lg_mx5500_set_hid_receive_handler(device, lg_mx5500_receiver_hid_receive);
+	lg_device_set_data(device, receiver);
+	lg_device_set_hid_receive_handler(device, lg_mx5500_receiver_hid_receive);
 
-	lg_mx5500_queue(device, &device->out_queue, cmd, sizeof(cmd));
+	lg_device_queue_out(device, cmd, sizeof(cmd));
 
 	return 0;
 }
 
-void lg_mx5500_receiver_exit(struct lg_mx5500 *device)
+void lg_mx5500_receiver_exit(struct lg_device *device)
 {
-	struct lg_mx5500_receiver *receiver= lg_mx5500_get_data(device);
+	struct lg_mx5500_receiver *receiver= lg_device_get_receiver(device);
 
 	lg_mx5500_receiver_destroy(receiver);
 }

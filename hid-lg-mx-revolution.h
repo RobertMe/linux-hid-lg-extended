@@ -3,6 +3,7 @@
 
 #include <linux/hid.h>
 
+#include "hid-lg-device.h"
 #include "hid-lg-mx5500-receiver.h"
 
 struct lg_mx_revolution;
@@ -17,15 +18,15 @@ enum lg_mx5500_scrollmode {
 	LG_MX5500_SCROLLMODE_BUTTON_TOGGLE = 0x08,
 };
 
-void lg_mx_revolution_handle(struct lg_mx5500 *device, const u8 *buffer,
+void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
 								size_t count);
 
-int lg_mx_revolution_init(struct lg_mx5500 *device);
+int lg_mx_revolution_init(struct lg_device *device);
 
-void lg_mx_revolution_exit(struct lg_mx5500 *device);
+void lg_mx_revolution_exit(struct lg_device *device);
 
 struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
-			struct lg_mx5500 *device,
+			struct lg_device *device,
 			const u8 *buffer, size_t count);
 
 void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse);

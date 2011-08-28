@@ -4,7 +4,7 @@
 #include "hid-lg-mx-revolution.h"
 
 struct lg_mx_revolution {
-	struct lg_mx5500 *device;
+	struct lg_device *device;
 	wait_queue_head_t received;
 	u8 devnum;
 	u8 initialized;
@@ -23,16 +23,16 @@ struct lg_mx_revolution_handler {
 static inline struct lg_mx_revolution *lg_mx_revolution_get_from_device(
 			struct device *device)
 {
-	return lg_mx5500_get_mouse(dev_get_drvdata(device));
+	return lg_device_get_mouse(dev_get_drvdata(device));
 }
 
 static int lg_mx_revolution_request_battery(struct lg_mx_revolution *mouse)
 {
-	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x0d, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0x01, LG_DEVICE_ACTION_GET, 0x0d, 0x00, 0x00, 0x00 };
 
 	cmd[1] = mouse->devnum;
 	mouse->battery_level = -1;
-	lg_mx5500_queue_out(mouse->device, cmd, sizeof(cmd));
+	lg_device_queue_out(mouse->device, cmd, sizeof(cmd));
 
 	return wait_event_interruptible(mouse->received,
 				 mouse->battery_level >= 0);
@@ -40,13 +40,13 @@ static int lg_mx_revolution_request_battery(struct lg_mx_revolution *mouse)
 
 static int lg_mx_revolution_request_scrollmode(struct lg_mx_revolution *mouse)
 {
-	u8 cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_GET, 0x56, 0x00, 0x00, 0x00 };
+	u8 cmd[7] = { 0x10, 0x01, LG_DEVICE_ACTION_GET, 0x56, 0x00, 0x00, 0x00 };
 
 	if (mouse->scrollmode_set)
 		return 0;
 
 	cmd[1] = mouse->devnum;
-	lg_mx5500_queue_out(mouse->device, cmd, sizeof(cmd));
+	lg_device_queue_out(mouse->device, cmd, sizeof(cmd));
 
 	return wait_event_interruptible(mouse->received,
 				 mouse->scrollmode_set);
@@ -139,7 +139,7 @@ static ssize_t mouse_store_scrollmode(struct device *device,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	short int mode, set_default, first, second, param_count;
-	char cmd[7] = { 0x10, 0x01, LG_MX5500_ACTION_SET, 0x56, 0x00, 0x00, 0x00 };
+	char cmd[7] = { 0x10, 0x01, LG_DEVICE_ACTION_SET, 0x56, 0x00, 0x00, 0x00 };
 	struct lg_mx_revolution *mouse = lg_mx_revolution_get_from_device(device);
 
 	set_default = 0;
@@ -175,7 +175,7 @@ static ssize_t mouse_store_scrollmode(struct device *device,
 		cmd[6] = first;
 	}
 
-	lg_mx5500_queue_out(mouse->device, cmd, sizeof(cmd));
+	lg_device_queue_out(mouse->device, cmd, sizeof(cmd));
 
 	return count;
 }
@@ -211,16 +211,16 @@ static void mouse_handle_scrollmode(
 }
 
 static struct lg_mx_revolution_handler lg_mx_revolution_handlers[] = {
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x0d,
+	{ .action = LG_DEVICE_ACTION_GET, .first = 0x0d,
 		.func = mouse_handle_get_battery },
-	{ .action = LG_MX5500_ACTION_GET, .first = 0x56,
+	{ .action = LG_DEVICE_ACTION_GET, .first = 0x56,
 		.func = mouse_handle_scrollmode },
-	{ .action = LG_MX5500_ACTION_SET, .first = 0x56,
+	{ .action = LG_DEVICE_ACTION_SET, .first = 0x56,
 		.func = mouse_handle_scrollmode },
 	{ }
 };
 
-void lg_mx_revolution_handle(struct lg_mx5500 *device, const u8 *buffer,
+void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
 								size_t count)
 {
 	int i;
@@ -228,26 +228,26 @@ void lg_mx_revolution_handle(struct lg_mx5500 *device, const u8 *buffer,
 	struct lg_mx_revolution *mouse;
 	struct lg_mx_revolution_handler *handler;
 
-	mouse = lg_mx5500_get_mouse(device);
+	mouse = lg_device_get_mouse(device);
 
 	for (i = 0; lg_mx_revolution_handlers[i].action ||
 		lg_mx_revolution_handlers[i].first; i++) {
 		handler = &lg_mx_revolution_handlers[i];
 		if (handler->action == buffer[2] &&
 				handler->first == buffer[3]) {
-			if (handler->func != LG_MX5500_HANDLER_IGNORE)
+			if (handler->func != LG_DEVICE_HANDLER_IGNORE)
 				handler->func(mouse, buffer, count);
 			handeld = 1;
 		}
 	}
 
 	if (!handeld)
-		lg_mx5500_err(device, "Unhandeld mouse message %02x %02x", buffer[2], buffer[3]);
+		lg_device_err(device, "Unhandeld mouse message %02x %02x", buffer[2], buffer[3]);
 
 	wake_up_interruptible(&mouse->received);
 }
 
-struct lg_mx_revolution *lg_mx_revolution_create(struct lg_mx5500 *device)
+struct lg_mx_revolution *lg_mx_revolution_create(struct lg_device *device)
 {
 	struct lg_mx_revolution *mouse;
 
@@ -273,7 +273,7 @@ void lg_mx_revolution_destroy(struct lg_mx_revolution *mouse)
 	kfree(mouse);
 }
 
-int lg_mx_revolution_init(struct lg_mx5500 *device)
+int lg_mx_revolution_init(struct lg_device *device)
 {
 	int ret;
 	struct lg_mx_revolution *mouse;
@@ -289,8 +289,8 @@ int lg_mx_revolution_init(struct lg_mx5500 *device)
 	if (ret)
 		goto error_free;
 
-	lg_mx5500_set_data(device, mouse);
-	lg_mx5500_set_hid_receive_handler(device, lg_mx_revolution_handle);
+	lg_device_set_data(device, mouse);
+	lg_device_set_hid_receive_handler(device, lg_mx_revolution_handle);
 
 	return ret;
 error_free:
@@ -299,11 +299,11 @@ error:
 	return ret;
 }
 
-void lg_mx_revolution_exit(struct lg_mx5500 *device)
+void lg_mx_revolution_exit(struct lg_device *device)
 {
 	struct lg_mx_revolution *mouse;
 
-	mouse = lg_mx5500_get_mouse(device);
+	mouse = lg_device_get_mouse(device);
 
 	if (mouse == NULL)
 		return;
@@ -315,7 +315,7 @@ void lg_mx_revolution_exit(struct lg_mx5500 *device)
 }
 
 struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
-			struct lg_mx5500 *device,
+			struct lg_device *device,
 			const u8 *buffer, size_t count)
 {
 	struct lg_mx_revolution *mouse;
