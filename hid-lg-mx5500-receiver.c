@@ -45,10 +45,16 @@ static void lg_mx5500_receiver_logon_device(struct lg_mx5500_receiver *receiver,
 {
 	switch (buffer[1]) {
 	case 0x01:
+		if (receiver->keyboard) {
+			lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
+		}
 		receiver->keyboard = lg_mx5500_keyboard_init_on_receiver(
 					receiver->device, buffer, count);
 		break;
 	case 0x02:
+		if (receiver->keyboard) {
+			lg_mx_revolution_exit_on_receiver(receiver->mouse);
+		}
 		receiver->mouse = lg_mx_revolution_init_on_receiver(
 					receiver->device, buffer, count);
 		break;
