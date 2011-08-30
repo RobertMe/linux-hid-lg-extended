@@ -346,3 +346,17 @@ void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse)
 				&mouse_attr_group);
 	lg_mx_revolution_destroy(mouse);
 }
+
+static struct lg_driver driver = {
+	.product_id = USB_DEVICE_ID_MX5500_MOUSE,
+	.init = lg_mx_revolution_init,
+	.exit = lg_mx_revolution_exit,
+	.receive_handler = lg_mx_revolution_handle,
+	.type = LG_MX5500_MOUSE,
+};
+
+struct lg_driver *lg_mx_revolution_get_driver()
+{
+	return &driver;
+}
+

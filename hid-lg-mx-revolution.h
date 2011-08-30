@@ -31,4 +31,6 @@ struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
 
 void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse);
 
+struct lg_driver *lg_mx_revolution_get_driver(void);
+
 #endif

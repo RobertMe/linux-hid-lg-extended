@@ -4,6 +4,8 @@
 #include <linux/hid.h>
 #include <linux/workqueue.h>
 
+#include "hid-lg-core.h"
+
 #define LG_DEVICE_BUFSIZE 32
 
 #define LG_DEVICE_HANDLER_IGNORE NULL
@@ -15,12 +17,6 @@ enum lg_device_actions {
 	LG_DEVICE_ACTION_SET = 0x80,
 	LG_DEVICE_ACTION_GET = 0x81,
 	LG_DEVICE_ACTION_DO = 0x83,
-};
-
-enum lg_devices {
-	LG_MX5500_RECEIVER,
-	LG_MX5500_KEYBOARD,
-	LG_MX5500_MOUSE,
 };
 
 struct lg_device_buf {
@@ -81,5 +77,12 @@ struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device);
 struct lg_mx5500_keyboard *lg_device_get_keyboard(struct lg_device *device);
 
 struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device);
+
+int lg_device_event(struct hid_device *hdev, struct hid_report *report,
+				u8 *raw_data, int size);
+
+int lg_device_hid_probe(struct hid_device *hdev, const struct hid_device_id *id);
+
+void lg_device_hid_remove(struct hid_device *hdev);
 
 #endif

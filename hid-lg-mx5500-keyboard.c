@@ -369,3 +369,16 @@ void lg_mx5500_keyboard_exit_on_receiver(struct lg_mx5500_keyboard *keyboard)
 
 	lg_mx5500_keyboard_destroy(keyboard);
 }
+
+static struct lg_driver driver = {
+	.product_id = USB_DEVICE_ID_MX5500_KEYBOARD,
+	.init = lg_mx5500_keyboard_init,
+	.exit = lg_mx5500_keyboard_exit,
+	.receive_handler = lg_mx5500_keyboard_handle,
+	.type = LG_MX5500_KEYBOARD,
+};
+
+struct lg_driver *lg_mx5500_keyboard_get_driver()
+{
+	return &driver;
+}

@@ -3,14 +3,10 @@
 #include <linux/spinlock.h>
 
 #include "hid-lg-mx-revolution.h"
+#include "hid-lg-core.h"
 #include "hid-lg-device.h"
 #include "hid-lg-mx5500-receiver.h"
 #include "hid-lg-mx5500-keyboard.h"
-
-#define USB_VENDOR_ID_LOGITECH          0x046d
-#define USB_DEVICE_ID_MX5500_RECEIVER   0xc71c
-#define USB_DEVICE_ID_MX5500_KEYBOARD   0xb30b
-#define USB_DEVICE_ID_MX5500_MOUSE      0xb007
 
 void lg_device_set_data(struct lg_device *device, void *data)
 {
@@ -152,7 +148,7 @@ void lg_device_receive_worker(struct work_struct *work)
 	spin_unlock_irqrestore(&queue->qlock, flags);
 }
 
-static int lg_device_event(struct hid_device *hdev, struct hid_report *report,
+int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 				u8 *raw_data, int size)
 {
 	struct lg_device *device;
@@ -200,7 +196,7 @@ static void lg_device_destroy(struct lg_device *device)
 	kfree(device);
 }
 
-static int lg_device_hid_probe(struct hid_device *hdev,
+int lg_device_hid_probe(struct hid_device *hdev,
 				const struct hid_device_id *id)
 {
 	struct lg_device *device;
@@ -245,7 +241,7 @@ err_free:
 	return ret;
 }
 
-static void lg_device_hid_remove(struct hid_device *hdev)
+void lg_device_hid_remove(struct hid_device *hdev)
 {
 	struct lg_device *device = hid_get_drvdata(hdev);
 
@@ -256,46 +252,3 @@ static void lg_device_hid_remove(struct hid_device *hdev)
 
 	lg_device_destroy(device);
 }
-
-static const struct hid_device_id lg_hid_devices[] = {
-	{ HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_RECEIVER) },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_KEYBOARD) },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_MOUSE) },
-	{ }
-};
-
-MODULE_DEVICE_TABLE(hid, lg_hid_devices);
-
-static struct hid_driver lg_hid_driver = {
-	.name = "MX5500",
-	.id_table = lg_hid_devices,
-	.probe = lg_device_hid_probe,
-	.remove = lg_device_hid_remove,
-	.raw_event = lg_device_event,
-};
-
-static int __init lg_device_init(void)
-{
-	int ret;
-
-	ret = hid_register_driver(&lg_hid_driver);
-	if (ret)
-		pr_err("Can't register mx5500 hid driver\n");
-
-	return ret;
-}
-
-static void __exit lg_device_exit(void)
-{
-	hid_unregister_driver(&lg_hid_driver);
-}
-
-module_init(lg_device_init);
-module_exit(lg_device_exit);
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Robert Meijers <robert.meijers@gmail.com>");
-MODULE_DESCRIPTION("Logitech MX5500 sysfs information");
-MODULE_VERSION("0.1");

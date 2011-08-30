@@ -21,4 +21,6 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_init_on_receiver(
 
 void lg_mx5500_keyboard_exit_on_receiver(struct lg_mx5500_keyboard *keyboard);
 
+struct lg_driver *lg_mx5500_keyboard_get_driver(void);
+
 #endif

@@ -1,6 +1,7 @@
 #include <linux/hid.h>
 #include <asm/atomic.h>
 
+#include "hid-lg-core.h"
 #include "hid-lg-mx-revolution.h"
 #include "hid-lg-mx5500-keyboard.h"
 #include "hid-lg-mx5500-receiver.h"
@@ -175,7 +176,7 @@ static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
 	kfree(receiver);
 }
 
-static void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
+void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
 								size_t count)
 {
 	struct lg_mx5500_receiver *receiver;
@@ -240,4 +241,17 @@ void lg_mx5500_receiver_exit(struct lg_device *device)
 	struct lg_mx5500_receiver *receiver= lg_device_get_receiver(device);
 
 	lg_mx5500_receiver_destroy(receiver);
+}
+
+static struct lg_driver driver = {
+	.product_id = USB_DEVICE_ID_MX5500_RECEIVER,
+	.init = lg_mx5500_receiver_init,
+	.exit = lg_mx5500_receiver_exit,
+	.receive_handler = lg_mx5500_receiver_hid_receive,
+	.type = LG_MX5500_RECEIVER,
+};
+
+struct lg_driver *lg_mx5500_receiver_get_driver()
+{
+	return &driver;
 }
