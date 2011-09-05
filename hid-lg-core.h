@@ -1,6 +1,7 @@
 #ifndef __HID_LG_CORE
 #define __HID_LG_CORE
 
+#include <linux/hid.h>
 #include <linux/list.h>
 
 #define USB_VENDOR_ID_LOGITECH          0x046d
@@ -20,7 +21,7 @@ typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 					  const u8 *payload, size_t size);
 
 struct lg_driver {
-	u16 product_id;
+	struct hid_device_id device_id;
 	int (*init)(struct lg_device *device);
 	void (*exit)(struct lg_device *device);
 	lg_device_hid_receive_handler receive_handler;

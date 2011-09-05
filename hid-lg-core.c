@@ -13,13 +13,19 @@ void lg_add_driver(struct lg_driver *driver)
 static struct lg_driver *lg_find_driver(struct hid_device *hdev)
 {
 	struct lg_driver *driver;
+	u8 found;
+
 	list_for_each_entry(driver, &drivers.list, list)
 	{
-		if (hdev->product == driver->product_id)
+		if (hdev->bus == driver->device_id.bus &&
+			hdev->vendor == driver->device_id.vendor &&
+			hdev->product == driver->device_id.product) {
+			found = 1;
 			break;
+		}
 	}
 
-	if (hdev->product != driver->product_id)
+	if (!found)
 		return NULL;
 
 	return driver;

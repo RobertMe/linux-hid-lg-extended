@@ -244,7 +244,8 @@ void lg_mx5500_receiver_exit(struct lg_device *device)
 }
 
 static struct lg_driver driver = {
-	.product_id = USB_DEVICE_ID_MX5500_RECEIVER,
+	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_RECEIVER) },
 	.init = lg_mx5500_receiver_init,
 	.exit = lg_mx5500_receiver_exit,
 	.receive_handler = lg_mx5500_receiver_hid_receive,

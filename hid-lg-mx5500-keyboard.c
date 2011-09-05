@@ -371,7 +371,8 @@ void lg_mx5500_keyboard_exit_on_receiver(struct lg_mx5500_keyboard *keyboard)
 }
 
 static struct lg_driver driver = {
-	.product_id = USB_DEVICE_ID_MX5500_KEYBOARD,
+	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_KEYBOARD) },
 	.init = lg_mx5500_keyboard_init,
 	.exit = lg_mx5500_keyboard_exit,
 	.receive_handler = lg_mx5500_keyboard_handle,

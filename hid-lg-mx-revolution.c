@@ -348,7 +348,8 @@ void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse)
 }
 
 static struct lg_driver driver = {
-	.product_id = USB_DEVICE_ID_MX5500_MOUSE,
+	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_MOUSE) },
 	.init = lg_mx_revolution_init,
 	.exit = lg_mx_revolution_exit,
 	.receive_handler = lg_mx_revolution_handle,
