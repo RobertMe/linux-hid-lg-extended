@@ -32,4 +32,6 @@ struct lg_driver {
 
 void lg_add_driver(struct lg_driver *driver);
 
+void lg_del_driver(struct lg_driver *driver);
+
 #endif

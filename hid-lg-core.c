@@ -10,6 +10,13 @@ void lg_add_driver(struct lg_driver *driver)
 	list_add(&driver->list, &drivers.list);
 }
 
+void lg_del_driver(struct lg_driver *driver)
+{
+	list_del(&driver->list);
+	if (list_empty(&driver->list))
+		INIT_LIST_HEAD(&drivers.list);
+}
+
 static struct lg_driver *lg_find_driver(struct hid_device *hdev)
 {
 	struct lg_driver *driver;
