@@ -354,6 +354,7 @@ static struct lg_driver driver = {
 	.exit = lg_mx_revolution_exit,
 	.receive_handler = lg_mx_revolution_handle,
 	.type = LG_MX5500_MOUSE,
+	.name = "Logitech MX Revolution",
 };
 
 struct lg_driver *lg_mx_revolution_get_driver()

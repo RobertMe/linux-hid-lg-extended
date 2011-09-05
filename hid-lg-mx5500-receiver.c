@@ -250,6 +250,7 @@ static struct lg_driver driver = {
 	.exit = lg_mx5500_receiver_exit,
 	.receive_handler = lg_mx5500_receiver_hid_receive,
 	.type = LG_MX5500_RECEIVER,
+	.name = "Logitech MX5500 Receiver",
 };
 
 struct lg_driver *lg_mx5500_receiver_get_driver()

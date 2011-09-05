@@ -377,6 +377,7 @@ static struct lg_driver driver = {
 	.exit = lg_mx5500_keyboard_exit,
 	.receive_handler = lg_mx5500_keyboard_handle,
 	.type = LG_MX5500_KEYBOARD,
+	.name = "Logitech MX5500",
 };
 
 struct lg_driver *lg_mx5500_keyboard_get_driver()

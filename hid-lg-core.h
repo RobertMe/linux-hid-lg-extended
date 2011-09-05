@@ -26,6 +26,7 @@ struct lg_driver {
 	void (*exit)(struct lg_device *device);
 	lg_device_hid_receive_handler receive_handler;
 	enum lg_devices type;
+	char *name;
 
 	struct list_head list;
 };
