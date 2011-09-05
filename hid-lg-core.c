@@ -144,7 +144,13 @@ static int __init lg_init(void)
 
 static void __exit lg_exit(void)
 {
+	struct list_head *cur, *next;
+
 	hid_unregister_driver(&lg_hid_driver);
+
+	list_for_each_safe(cur, next, &drivers.list) {
+		lg_del_driver(list_entry(cur, struct lg_driver, list));
+	}
 }
 
 module_init(lg_init);
