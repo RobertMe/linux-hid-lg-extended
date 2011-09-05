@@ -47,7 +47,7 @@ struct lg_device {
 	struct hid_device *hdev;
 
 	void *data;
-	enum lg_devices type;
+	struct lg_driver *driver;
 
 	struct lg_device_queue out_queue;
 	struct lg_device_queue in_queue;
@@ -81,8 +81,9 @@ struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device);
 int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 				u8 *raw_data, int size);
 
-int lg_device_hid_probe(struct hid_device *hdev, const struct hid_device_id *id);
+struct lg_device *lg_device_create(struct hid_device *hdev,
+					struct lg_driver *driver);
 
-void lg_device_hid_remove(struct hid_device *hdev);
+void lg_device_destroy(struct lg_device *device);
 
 #endif

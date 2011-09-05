@@ -10,6 +10,87 @@ void lg_add_driver(struct lg_driver *driver)
 	list_add(&driver->list, &drivers.list);
 }
 
+static struct lg_driver *lg_find_driver(struct hid_device *hdev)
+{
+	struct lg_driver *driver;
+	list_for_each_entry(driver, &drivers.list, list)
+	{
+		if (hdev->product == driver->product_id)
+			break;
+	}
+
+	if (hdev->product != driver->product_id)
+		return NULL;
+
+	return driver;
+}
+
+void lg_destroy(struct lg_device *device)
+{
+	if (device->driver)
+		device->driver->exit(device);
+
+	lg_device_destroy(device);
+}
+
+int lg_probe(struct hid_device *hdev,
+				const struct hid_device_id *id)
+{
+	struct lg_device *device;
+	struct lg_driver *driver;
+	unsigned int connect_mask = HID_CONNECT_DEFAULT;
+	int ret;
+
+	driver = lg_find_driver(hdev);
+	if (!driver) {
+		ret = -EINVAL;
+		goto err;
+	}
+
+	device = lg_device_create(hdev, driver);
+	if (!device) {
+		hid_err(hdev, "Can't alloc device\n");
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	ret = hid_parse(hdev);
+	if (ret) {
+		hid_err(hdev, "parse failed\n");
+		goto err_free;
+	}
+
+	ret = hid_hw_start(hdev, connect_mask);
+	if (ret) {
+		hid_err(hdev, "hw start failed\n");
+		goto err_free;
+	}
+
+	ret = driver->init(device);
+	if (ret)
+		goto err_stop;
+
+	return 0;
+err_stop:
+	hid_hw_stop(hdev);
+err_free:
+	lg_destroy(device);
+err:
+	return ret;
+}
+
+void lg_remove(struct hid_device *hdev)
+{
+	struct lg_device *device = hid_get_drvdata(hdev);
+
+	if (!device)
+		return;
+
+	hid_hw_stop(hdev);
+
+	lg_destroy(device);
+}
+
 static const struct hid_device_id lg_hid_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_RECEIVER) },
@@ -25,8 +106,8 @@ MODULE_DEVICE_TABLE(hid, lg_hid_devices);
 static struct hid_driver lg_hid_driver = {
 	.name = "MX5500",
 	.id_table = lg_hid_devices,
-	.probe = lg_device_hid_probe,
-	.remove = lg_device_hid_remove,
+	.probe = lg_probe,
+	.remove = lg_remove,
 	.raw_event = lg_device_event,
 };
 

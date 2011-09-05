@@ -21,7 +21,7 @@ void *lg_device_get_data(struct lg_device *device)
 struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device)
 {
 	struct lg_mx5500_receiver *receiver = NULL;
-	if (device->type == LG_MX5500_RECEIVER)
+	if (device->driver->type == LG_MX5500_RECEIVER)
 		receiver = lg_device_get_data(device);
 
 	return receiver;
@@ -30,9 +30,9 @@ struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device)
 struct lg_mx5500_keyboard *lg_device_get_keyboard(struct lg_device *device)
 {
 	struct lg_mx5500_keyboard *keyboard = NULL;
-	if (device->type == LG_MX5500_KEYBOARD)
+	if (device->driver->type == LG_MX5500_KEYBOARD)
 		keyboard = lg_device_get_data(device);
-	else if (device->type == LG_MX5500_RECEIVER)
+	else if (device->driver->type == LG_MX5500_RECEIVER)
 		keyboard = ((struct lg_mx5500_receiver*)lg_device_get_receiver(device))->keyboard;
 
 	return keyboard;
@@ -41,9 +41,9 @@ struct lg_mx5500_keyboard *lg_device_get_keyboard(struct lg_device *device)
 struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device)
 {
 	struct lg_mx_revolution *mouse = NULL;
-	if (device->type == LG_MX5500_MOUSE)
+	if (device->driver->type == LG_MX5500_MOUSE)
 		mouse = lg_device_get_data(device);
-	else if (device->type == LG_MX5500_RECEIVER)
+	else if (device->driver->type == LG_MX5500_RECEIVER)
 		mouse = ((struct lg_mx5500_receiver*)lg_device_get_receiver(device))->mouse;
 
 	return mouse;
@@ -163,7 +163,8 @@ int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 	return 0;
 }
 
-static struct lg_device *lg_device_create(struct hid_device *hdev)
+struct lg_device *lg_device_create(struct hid_device *hdev,
+					struct lg_driver *driver)
 {
 	struct lg_device *device;
 
@@ -173,6 +174,7 @@ static struct lg_device *lg_device_create(struct hid_device *hdev)
 
 	device->hdev = hdev;
 	device->data = NULL;
+	device->driver = driver;
 	device->receive_handler = NULL;
 	hid_set_drvdata(hdev, device);
 
@@ -185,70 +187,9 @@ static struct lg_device *lg_device_create(struct hid_device *hdev)
 	return device;
 }
 
-static void lg_device_destroy(struct lg_device *device)
+void lg_device_destroy(struct lg_device *device)
 {
-	if (device->hdev->product == USB_DEVICE_ID_MX5500_RECEIVER)
-		lg_mx5500_receiver_exit(device);
-	else if (device->hdev->product == USB_DEVICE_ID_MX5500_KEYBOARD)
-		lg_mx5500_keyboard_exit(device);
-	else if (device->hdev->product == USB_DEVICE_ID_MX5500_MOUSE)
-		lg_mx_revolution_exit(device);
-	kfree(device);
-}
-
-int lg_device_hid_probe(struct hid_device *hdev,
-				const struct hid_device_id *id)
-{
-	struct lg_device *device;
-	unsigned int connect_mask = HID_CONNECT_DEFAULT;
-	int ret;
-
-	device = lg_device_create(hdev);
-	if (!device) {
-		hid_err(hdev, "Can't alloc device\n");
-		return -ENOMEM;
-	}
-
-	ret = hid_parse(hdev);
-	if (ret) {
-		hid_err(hdev, "parse failed\n");
-		goto err_free;
-	}
-
-	ret = hid_hw_start(hdev, connect_mask);
-	if (ret) {
-		hid_err(hdev, "hw start failed\n");
-		goto err_free;
-	}
-
-	if (hdev->product == USB_DEVICE_ID_MX5500_RECEIVER) {
-		device->type = LG_MX5500_RECEIVER;
-		ret = lg_mx5500_receiver_init(device);
-	} else if (hdev->product == USB_DEVICE_ID_MX5500_KEYBOARD) {
-		device->type = LG_MX5500_KEYBOARD;
-		ret = lg_mx5500_keyboard_init(device);
-	} else if (hdev->product == USB_DEVICE_ID_MX5500_MOUSE) {
-		device->type = LG_MX5500_MOUSE;
-		ret = lg_mx_revolution_init(device);
-	}
-
-	if (ret)
-		goto err_free;
-
-	return 0;
-err_free:
-	lg_device_destroy(device);
-	return ret;
-}
-
-void lg_device_hid_remove(struct hid_device *hdev)
-{
-	struct lg_device *device = hid_get_drvdata(hdev);
-
-	hid_hw_stop(hdev);
-
 	cancel_work_sync(&device->in_queue.worker);
 	cancel_work_sync(&device->out_queue.worker);
-
-	lg_device_destroy(device);
+	kfree(device);
 }
