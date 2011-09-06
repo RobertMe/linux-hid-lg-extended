@@ -27,12 +27,13 @@ struct lg_driver {
 	lg_device_hid_receive_handler receive_handler;
 	enum lg_devices type;
 	char *name;
+	struct hid_driver hid_driver;
 
 	struct list_head list;
 };
 
-void lg_add_driver(struct lg_driver *driver);
+int lg_register_driver(struct lg_driver *driver);
 
-void lg_del_driver(struct lg_driver *driver);
+void lg_unregister_driver(struct lg_driver *driver);
 
 #endif

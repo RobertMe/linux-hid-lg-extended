@@ -5,14 +5,37 @@
 
 static struct lg_driver drivers;
 
-void lg_add_driver(struct lg_driver *driver)
+
+int lg_probe(struct hid_device *hdev,
+				const struct hid_device_id *id);
+
+void lg_remove(struct hid_device *hdev);
+
+int lg_register_driver(struct lg_driver *driver)
 {
+	int ret;
+	struct hid_device_id device_ids[2];
+
 	list_add(&driver->list, &drivers.list);
+
+	device_ids[0] = driver->device_id;
+	driver->hid_driver.name = driver->name;
+	driver->hid_driver.id_table = device_ids;
+	driver->hid_driver.probe = lg_probe;
+	driver->hid_driver.remove = lg_remove;
+	driver->hid_driver.raw_event = lg_device_event;
+
+	ret = hid_register_driver(&driver->hid_driver);
+	if (ret)
+		pr_err("Can't register %s hid driver\n", driver->name);
+
+	return ret;
 }
 
-void lg_del_driver(struct lg_driver *driver)
+void lg_unregister_driver(struct lg_driver *driver)
 {
 	list_del(&driver->list);
+	hid_unregister_driver(&driver->hid_driver);
 	if (list_empty(&driver->list))
 		INIT_LIST_HEAD(&drivers.list);
 }
@@ -116,40 +139,24 @@ static const struct hid_device_id lg_hid_devices[] = {
 
 MODULE_DEVICE_TABLE(hid, lg_hid_devices);
 
-static struct hid_driver lg_hid_driver = {
-	.name = "MX5500",
-	.id_table = lg_hid_devices,
-	.probe = lg_probe,
-	.remove = lg_remove,
-	.raw_event = lg_device_event,
-};
-
 
 static int __init lg_init(void)
 {
-	int ret;
-
 	INIT_LIST_HEAD(&drivers.list);
 
-	lg_add_driver(lg_mx5500_keyboard_get_driver());
-	lg_add_driver(lg_mx5500_receiver_get_driver());
-	lg_add_driver(lg_mx_revolution_get_driver());
+	lg_register_driver(lg_mx5500_keyboard_get_driver());
+	lg_register_driver(lg_mx5500_receiver_get_driver());
+	lg_register_driver(lg_mx_revolution_get_driver());
 
-	ret = hid_register_driver(&lg_hid_driver);
-	if (ret)
-		pr_err("Can't register mx5500 hid driver\n");
-
-	return ret;
+	return 0;
 }
 
 static void __exit lg_exit(void)
 {
 	struct list_head *cur, *next;
 
-	hid_unregister_driver(&lg_hid_driver);
-
 	list_for_each_safe(cur, next, &drivers.list) {
-		lg_del_driver(list_entry(cur, struct lg_driver, list));
+		lg_unregister_driver(list_entry(cur, struct lg_driver, list));
 	}
 }
 
