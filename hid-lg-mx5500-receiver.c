@@ -229,7 +229,6 @@ int lg_mx5500_receiver_init(struct lg_device *device)
 	}
 
 	lg_device_set_data(device, receiver);
-	lg_device_set_hid_receive_handler(device, lg_mx5500_receiver_hid_receive);
 
 	lg_device_queue_out(device, cmd, sizeof(cmd));
 

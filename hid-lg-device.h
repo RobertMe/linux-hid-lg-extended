@@ -51,8 +51,6 @@ struct lg_device {
 
 	struct lg_device_queue out_queue;
 	struct lg_device_queue in_queue;
-
-	lg_device_hid_receive_handler receive_handler;
 };
 
 void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue,
@@ -68,9 +66,6 @@ void lg_device_receive_worker(struct work_struct *work);
 void lg_device_set_data(struct lg_device *device, void *data);
 
 void *lg_device_get_data(struct lg_device *device);
-
-void lg_device_set_hid_receive_handler(struct lg_device *device,
-					lg_device_hid_receive_handler receive_handler);
 
 struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device);
 

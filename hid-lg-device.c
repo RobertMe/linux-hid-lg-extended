@@ -49,12 +49,6 @@ struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device)
 	return mouse;
 }
 
-void lg_device_set_hid_receive_handler(struct lg_device *device,
-				       lg_device_hid_receive_handler receive_handler)
-{
-	device->receive_handler = receive_handler;
-}
-
 void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue, const u8 *buffer,
 								size_t count)
 {
@@ -137,8 +131,8 @@ void lg_device_receive_worker(struct work_struct *work)
 
 	while (queue->head != queue->tail) {
 		spin_unlock_irqrestore(&queue->qlock, flags);
-		if (device->receive_handler)
-			device->receive_handler(device, queue->queue[queue->tail].data,
+		if (device->driver->receive_handler)
+			device->driver->receive_handler(device, queue->queue[queue->tail].data,
 						queue->queue[queue->tail].size);
 		spin_lock_irqsave(&queue->qlock, flags);
 
@@ -175,7 +169,6 @@ struct lg_device *lg_device_create(struct hid_device *hdev,
 	device->hdev = hdev;
 	device->data = NULL;
 	device->driver = driver;
-	device->receive_handler = NULL;
 	hid_set_drvdata(hdev, device);
 
 	spin_lock_init(&device->out_queue.qlock);

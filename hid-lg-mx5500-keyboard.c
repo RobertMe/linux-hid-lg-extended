@@ -304,7 +304,6 @@ int lg_mx5500_keyboard_init(struct lg_device *device)
 		goto error_free;
 
 	lg_device_set_data(device, keyboard);
-	lg_device_set_hid_receive_handler(device, lg_mx5500_keyboard_handle);
 
 	return ret;
 error_free:
