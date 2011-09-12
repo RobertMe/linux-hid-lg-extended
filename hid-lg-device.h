@@ -30,6 +30,8 @@ struct lg_device_queue {
 	u8 tail;
 	struct lg_device_buf queue[LG_DEVICE_BUFSIZE];
 	struct work_struct worker;
+
+	struct lg_device *main_device;
 };
 
 struct lg_device;
@@ -49,15 +51,15 @@ struct lg_device {
 	void *data;
 	struct lg_driver *driver;
 
-	struct lg_device_queue out_queue;
-	struct lg_device_queue in_queue;
+	struct lg_device_queue *out_queue;
+	struct lg_device_queue *in_queue;
 };
 
 void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue,
 						const u8 *buffer, size_t count);
 
 #define lg_device_queue_out(device, buffer, count)	\
-	lg_device_queue(device, &device->out_queue, buffer, count)
+	lg_device_queue(device, device->out_queue, buffer, count)
 
 void lg_device_send_worker(struct work_struct *work);
 

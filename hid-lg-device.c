@@ -101,8 +101,7 @@ void lg_device_send_worker(struct work_struct *work)
 {
 	struct lg_device_queue *queue = container_of(work, struct lg_device_queue,
 								worker);
-	struct lg_device *device= container_of(queue, struct lg_device,
-								out_queue);
+	struct lg_device *device= queue->main_device;
 	unsigned long flags;
 
 	spin_lock_irqsave(&queue->qlock, flags);
@@ -123,8 +122,7 @@ void lg_device_receive_worker(struct work_struct *work)
 {
 	struct lg_device_queue *queue = container_of(work, struct lg_device_queue,
 								worker);
-	struct lg_device *device= container_of(queue, struct lg_device,
-								in_queue);
+	struct lg_device *device= queue->main_device;
 	unsigned long flags;
 
 	spin_lock_irqsave(&queue->qlock, flags);
@@ -152,7 +150,7 @@ int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 
 	device = hid_get_drvdata(hdev);
 
-	lg_device_queue(device, &device->in_queue, raw_data, size);
+	lg_device_queue(device, device->in_queue, raw_data, size);
 
 	return 0;
 }
@@ -164,25 +162,43 @@ struct lg_device *lg_device_create(struct hid_device *hdev,
 
 	device = kzalloc(sizeof(*device), GFP_KERNEL);
 	if (!device)
-		return NULL;
+		goto err;
+
+	device->out_queue = kzalloc(sizeof(*device->out_queue), GFP_KERNEL);
+	if (!device->out_queue)
+		goto err_free_dev;
+
+	device->in_queue = kzalloc(sizeof(*device->in_queue), GFP_KERNEL);
+	if (!device->in_queue)
+		goto err_free_out;
 
 	device->hdev = hdev;
 	device->data = NULL;
 	device->driver = driver;
 	hid_set_drvdata(hdev, device);
 
-	spin_lock_init(&device->out_queue.qlock);
-	INIT_WORK(&device->out_queue.worker, lg_device_send_worker);
+	device->out_queue->main_device = device;
+	spin_lock_init(&device->out_queue->qlock);
+	INIT_WORK(&device->out_queue->worker, lg_device_send_worker);
 
-	spin_lock_init(&device->in_queue.qlock);
-	INIT_WORK(&device->in_queue.worker, lg_device_receive_worker);
+	device->in_queue->main_device = device;
+	spin_lock_init(&device->in_queue->qlock);
+	INIT_WORK(&device->in_queue->worker, lg_device_receive_worker);
 
 	return device;
+err_free_out:
+	kfree(device->out_queue);
+err_free_dev:
+	kfree(device);
+err:
+	return NULL;
 }
 
 void lg_device_destroy(struct lg_device *device)
 {
-	cancel_work_sync(&device->in_queue.worker);
-	cancel_work_sync(&device->out_queue.worker);
+	cancel_work_sync(&device->in_queue->worker);
+	cancel_work_sync(&device->out_queue->worker);
+	kfree(device->in_queue);
+	kfree(device->out_queue);
 	kfree(device);
 }
