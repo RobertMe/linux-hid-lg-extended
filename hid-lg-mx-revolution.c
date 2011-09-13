@@ -8,6 +8,7 @@ struct lg_mx_revolution {
 	wait_queue_head_t received;
 	u8 devnum;
 	u8 initialized;
+	struct attribute_group attr_group;
 
 	short battery_level;
 	u8 scrollmode_set;
@@ -188,11 +189,6 @@ static struct attribute *mouse_attrs[] = {
 	NULL,
 };
 
-static struct attribute_group mouse_attr_group = {
-	.name = "mouse",
-	.attrs = mouse_attrs,
-};
-
 static void mouse_handle_get_battery(
 		struct lg_mx_revolution *mouse, const u8 *buf,
 		size_t size)
@@ -247,7 +243,7 @@ void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
 	wake_up_interruptible(&mouse->received);
 }
 
-struct lg_mx_revolution *lg_mx_revolution_create(struct lg_device *device)
+struct lg_mx_revolution *lg_mx_revolution_create(struct lg_device *device, char *name)
 {
 	struct lg_mx_revolution *mouse;
 
@@ -260,6 +256,8 @@ struct lg_mx_revolution *lg_mx_revolution_create(struct lg_device *device)
 	mouse->battery_level = -1;
 	mouse->scrollmode_set = 0;
 	mouse->initialized = 0;
+	mouse->attr_group.name = name;
+	mouse->attr_group.attrs = mouse_attrs;
 	init_waitqueue_head(&mouse->received);
 
 	return mouse;
@@ -278,14 +276,14 @@ int lg_mx_revolution_init(struct lg_device *device)
 	int ret;
 	struct lg_mx_revolution *mouse;
 
-	mouse = lg_mx_revolution_create(device);
+	mouse = lg_mx_revolution_create(device, NULL);
 	if (!mouse) {
 		ret = -ENOMEM;
 		goto error;
 	}
 
-	ret = sysfs_create_files(&device->hdev->dev.kobj,
-		(const struct attribute**)mouse_attrs);
+	ret = sysfs_create_group(&device->hdev->dev.kobj,
+		&mouse->attr_group);
 	if (ret)
 		goto error_free;
 
@@ -307,8 +305,8 @@ void lg_mx_revolution_exit(struct lg_device *device)
 	if (mouse == NULL)
 		return;
 
-	sysfs_remove_files(&device->hdev->dev.kobj,
-		(const struct attribute **)mouse_attrs);
+	sysfs_remove_group(&device->hdev->dev.kobj,
+		&mouse->attr_group);
 
 	lg_mx_revolution_destroy(mouse);
 }
@@ -319,14 +317,14 @@ struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
 {
 	struct lg_mx_revolution *mouse;
 
-	mouse = lg_mx_revolution_create(device);
+	mouse = lg_mx_revolution_create(device, "mouse");
 	if (!mouse)
 		goto error;
 
 	mouse->devnum = buffer[1];
 
 	if (sysfs_create_group(&device->hdev->dev.kobj,
-		&mouse_attr_group))
+		&mouse->attr_group))
 		goto error_free;
 
 	return mouse;
@@ -342,7 +340,7 @@ void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse)
 		return;
 
 	sysfs_remove_group(&mouse->device->hdev->dev.kobj,
-				&mouse_attr_group);
+				&mouse->attr_group);
 	lg_mx_revolution_destroy(mouse);
 }
 
