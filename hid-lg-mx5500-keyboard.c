@@ -8,6 +8,7 @@ struct lg_mx5500_keyboard {
 	wait_queue_head_t received;
 	u8 devnum;
 	u8 initialized;
+	struct attribute_group attr_group;
 
 	short battery_level;
 	short lcd_page;
@@ -185,11 +186,6 @@ static struct attribute *keyboard_attrs[] = {
 	NULL,
 };
 
-static struct attribute_group keyboard_attr_group = {
-	.name = "keyboard",
-	.attrs = keyboard_attrs,
-};
-
 static void keyboard_handle_get_battery(
 		struct lg_mx5500_keyboard *keyboard, const u8 *buf,
 		size_t size)
@@ -269,7 +265,7 @@ void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
 	wake_up_interruptible(&keyboard->received);
 }
 
-struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_device *device)
+struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_device *device, char *name)
 {
 	struct lg_mx5500_keyboard *keyboard;
 
@@ -282,6 +278,8 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_device *device)
 	keyboard->lcd_page = 0;
 	keyboard->battery_level = -1;
 	keyboard->initialized = 0;
+	keyboard->attr_group.name = name;
+	keyboard->attr_group.attrs = keyboard_attrs;
 	init_waitqueue_head(&keyboard->received);
 
 	return keyboard;
@@ -292,14 +290,14 @@ int lg_mx5500_keyboard_init(struct lg_device *device)
 	int ret;
 	struct lg_mx5500_keyboard *keyboard;
 
-	keyboard = lg_mx5500_keyboard_create(device);
+	keyboard = lg_mx5500_keyboard_create(device, NULL);
 	if (!keyboard) {
 		ret = -ENOMEM;
 		goto error;
 	}
 
-	ret = sysfs_create_files(&device->hdev->dev.kobj,
-		(const struct attribute**)keyboard_attrs);
+	ret = sysfs_create_group(&device->hdev->dev.kobj,
+		&keyboard->attr_group);
 	if (ret)
 		goto error_free;
 
@@ -329,8 +327,8 @@ void lg_mx5500_keyboard_exit(struct lg_device *device)
 	if (keyboard == NULL)
 		return;
 
-	sysfs_remove_files(&device->hdev->dev.kobj,
-		(const struct attribute **)keyboard_attrs);
+	sysfs_remove_group(&device->hdev->dev.kobj,
+		&keyboard->attr_group);
 
 	lg_mx5500_keyboard_destroy(keyboard);
 }
@@ -341,13 +339,13 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_init_on_receiver(
 {
 	struct lg_mx5500_keyboard *keyboard;
 
-	keyboard = lg_mx5500_keyboard_create(device);
+	keyboard = lg_mx5500_keyboard_create(device, "keyboard");
 
 	if (!keyboard)
 		goto error;
 
 	if (sysfs_create_group(&device->hdev->dev.kobj,
-		&keyboard_attr_group))
+		&keyboard->attr_group))
 		goto error_free;
 
 	return keyboard;
@@ -364,7 +362,7 @@ void lg_mx5500_keyboard_exit_on_receiver(struct lg_mx5500_keyboard *keyboard)
 		return;
 
 	sysfs_remove_group(&keyboard->device->hdev->dev.kobj,
-				&keyboard_attr_group);
+				&keyboard->attr_group);
 
 	lg_mx5500_keyboard_destroy(keyboard);
 }
