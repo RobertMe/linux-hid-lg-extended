@@ -3,17 +3,9 @@
 
 #include "hid-lg-mx-revolution.h"
 
-struct lg_mx_revolution {
-	struct lg_device *device;
-	wait_queue_head_t received;
-	u8 devnum;
-	u8 initialized;
-	struct attribute_group attr_group;
+int lg_mx_revolution_init_new(struct hid_device *hdev);
 
-	short battery_level;
-	u8 scrollmode_set;
-	u8 scrollmode[3];
-};
+void lg_mx_revolution_exit(struct lg_device *device);
 
 struct lg_mx_revolution_handler {
 	u8 action;
@@ -238,12 +230,22 @@ void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
 	}
 
 	if (!handeld)
-		lg_device_err(device, "Unhandeld mouse message %02x %02x", buffer[2], buffer[3]);
+		lg_device_err((*device), "Unhandeld mouse message %02x %02x", buffer[2], buffer[3]);
 
 	wake_up_interruptible(&mouse->received);
 }
 
-struct lg_mx_revolution *lg_mx_revolution_create(struct lg_device *device, char *name)
+static struct lg_driver driver = {
+	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_MOUSE) },
+	.init = lg_mx_revolution_init_new,
+	.exit = lg_mx_revolution_exit,
+	.receive_handler = lg_mx_revolution_handle,
+	.type = LG_MX5500_MOUSE,
+	.name = "Logitech MX Revolution",
+};
+
+struct lg_mx_revolution *lg_mx_revolution_create(char *name)
 {
 	struct lg_mx_revolution *mouse;
 
@@ -251,7 +253,6 @@ struct lg_mx_revolution *lg_mx_revolution_create(struct lg_device *device, char 
 	if (!mouse)
 		return NULL;
 
-	mouse->device = device;
 	mouse->devnum = 1;
 	mouse->battery_level = -1;
 	mouse->scrollmode_set = 0;
@@ -268,26 +269,29 @@ void lg_mx_revolution_destroy(struct lg_mx_revolution *mouse)
 	if (!mouse)
 		return;
 
+	lg_device_destroy(&mouse->device);
 	kfree(mouse);
 }
 
-int lg_mx_revolution_init(struct lg_device *device)
+int lg_mx_revolution_init_new(struct hid_device *hdev)
 {
 	int ret;
 	struct lg_mx_revolution *mouse;
 
-	mouse = lg_mx_revolution_create(device, NULL);
+	mouse = lg_mx_revolution_create(NULL);
 	if (!mouse) {
 		ret = -ENOMEM;
 		goto error;
 	}
 
-	ret = sysfs_create_group(&device->hdev->dev.kobj,
-		&mouse->attr_group);
+	ret = lg_device_init(&mouse->device, hdev, &driver);
 	if (ret)
 		goto error_free;
 
-	lg_device_set_data(device, mouse);
+	ret = sysfs_create_group(&mouse->device.hdev->dev.kobj,
+		&mouse->attr_group);
+	if (ret)
+		goto error_free;
 
 	return ret;
 error_free:
@@ -317,19 +321,22 @@ struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
 {
 	struct lg_mx_revolution *mouse;
 
-	mouse = lg_mx_revolution_create(device, "mouse");
+	mouse = lg_mx_revolution_create("mouse");
 	if (!mouse)
 		goto error;
 
 	mouse->devnum = buffer[1];
 
-	if (sysfs_create_group(&device->hdev->dev.kobj,
+	if (lg_device_init_copy(&mouse->device, device, &driver))
+		goto error_free;
+
+	if (sysfs_create_group(&mouse->device.hdev->dev.kobj,
 		&mouse->attr_group))
 		goto error_free;
 
 	return mouse;
 error_free:
-	kfree(mouse);
+	lg_mx_revolution_destroy(mouse);
 error:
 	return NULL;
 }
@@ -339,20 +346,10 @@ void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse)
 	if (mouse == NULL)
 		return;
 
-	sysfs_remove_group(&mouse->device->hdev->dev.kobj,
+	sysfs_remove_group(&mouse->device.hdev->dev.kobj,
 				&mouse->attr_group);
 	lg_mx_revolution_destroy(mouse);
 }
-
-static struct lg_driver driver = {
-	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_MOUSE) },
-	.init = lg_mx_revolution_init,
-	.exit = lg_mx_revolution_exit,
-	.receive_handler = lg_mx_revolution_handle,
-	.type = LG_MX5500_MOUSE,
-	.name = "Logitech MX Revolution",
-};
 
 struct lg_driver *lg_mx_revolution_get_driver()
 {

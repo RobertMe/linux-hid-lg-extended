@@ -10,8 +10,8 @@
 
 #define LG_DEVICE_HANDLER_IGNORE NULL
 
-#define lg_device_err(device, fmt, arg...) hid_err(device->hdev, fmt, ##arg)
-#define lg_device_dbg(device, fmt, arg...) hid_dbg(device->hdev, fmt, ##arg)
+#define lg_device_err(device, fmt, arg...) hid_err(device.hdev, fmt, ##arg)
+#define lg_device_dbg(device, fmt, arg...) hid_dbg(device.hdev, fmt, ##arg)
 
 enum lg_device_actions {
 	LG_DEVICE_ACTION_SET = 0x80,
@@ -48,7 +48,6 @@ typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 struct lg_device {
 	struct hid_device *hdev;
 
-	void *data;
 	struct lg_driver *driver;
 
 	struct lg_device_queue *out_queue;
@@ -59,15 +58,11 @@ void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue,
 						const u8 *buffer, size_t count);
 
 #define lg_device_queue_out(device, buffer, count)	\
-	lg_device_queue(device, device->out_queue, buffer, count)
+	lg_device_queue(&device, device.out_queue, buffer, count)
 
 void lg_device_send_worker(struct work_struct *work);
 
 void lg_device_receive_worker(struct work_struct *work);
-
-void lg_device_set_data(struct lg_device *device, void *data);
-
-void *lg_device_get_data(struct lg_device *device);
 
 struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device);
 
@@ -78,7 +73,12 @@ struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device);
 int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 				u8 *raw_data, int size);
 
-struct lg_device *lg_device_create(struct hid_device *hdev,
+int lg_device_init(struct lg_device *device,
+					struct hid_device *hdev,
+					struct lg_driver *driver);
+
+int lg_device_init_copy(struct lg_device *device,
+					struct lg_device *from,
 					struct lg_driver *driver);
 
 void lg_device_destroy(struct lg_device *device);

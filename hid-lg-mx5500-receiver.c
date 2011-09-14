@@ -6,6 +6,8 @@
 #include "hid-lg-mx5500-keyboard.h"
 #include "hid-lg-mx5500-receiver.h"
 
+int lg_mx5500_receiver_init_new(struct hid_device *hdev);
+
 struct lg_mx5500_receiver_handler {
 	u8 action;
 	u8 first;
@@ -49,14 +51,14 @@ static void lg_mx5500_receiver_logon_device(struct lg_mx5500_receiver *receiver,
 			lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
 		}
 		receiver->keyboard = lg_mx5500_keyboard_init_on_receiver(
-					receiver->device, buffer, count);
+					&receiver->device, buffer, count);
 		break;
 	case 0x02:
 		if (receiver->keyboard) {
 			lg_mx_revolution_exit_on_receiver(receiver->mouse);
 		}
 		receiver->mouse = lg_mx_revolution_init_on_receiver(
-					receiver->device, buffer, count);
+					&receiver->device, buffer, count);
 		break;
 	}
 }
@@ -146,10 +148,58 @@ void lg_mx5500_receiver_handle(struct lg_device *device, const u8 *buffer,
 	}
 
 	if (!handeld)
-		lg_device_err(device, "Unhandeld receiver message %02x %02x", buffer[2], buffer[3]);
+		lg_device_err(receiver->device, "Unhandeld receiver message %02x %02x", buffer[2], buffer[3]);
 }
 
-static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct lg_device *device)
+void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
+								size_t count)
+{
+	struct lg_mx5500_receiver *receiver = lg_device_get_receiver(device);
+
+	if (count < 4) {
+		lg_device_err((*device), "Too few bytes to handle");
+		return;
+	}
+
+	if(!receiver)
+		return;
+
+	if (buffer[1] == 0xFF) {
+		lg_mx5500_receiver_handle(device, buffer, count);
+	} else if (buffer[2] == 0x41) {
+		lg_mx5500_receiver_logon_device(receiver, buffer, count);
+	} else if (buffer[2] == 0x40) {
+		lg_mx5500_receiver_logoff_device(receiver, buffer, count);
+	} else if (buffer[1] == 0x01) {
+		if (receiver->keyboard)
+			lg_mx5500_keyboard_handle(device, buffer, count);
+		else
+			lg_device_err((*device), "received message for keyboard,"
+				"but there isn't any present.\n"
+				"message is 0x%02x 0x%02x 0x%02x",
+				buffer[2], buffer[3], buffer[4]);
+	} else if (buffer[1] == 0x02) {
+		if (receiver->mouse)
+			lg_mx_revolution_handle(device, buffer, count);
+		else
+			lg_device_err((*device), "received message for mouse,"
+				"but there isn't any present.\n"
+				"message is 0x%02x 0x%02x 0x%02x",
+				buffer[2], buffer[3], buffer[4]);
+	}
+}
+
+static struct lg_driver driver = {
+	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_RECEIVER) },
+	.init = lg_mx5500_receiver_init_new,
+	.exit = lg_mx5500_receiver_exit,
+	.receive_handler = lg_mx5500_receiver_hid_receive,
+	.type = LG_MX5500_RECEIVER,
+	.name = "Logitech MX5500 Receiver",
+};
+
+static struct lg_mx5500_receiver *lg_mx5500_receiver_create(void)
 {
 	struct lg_mx5500_receiver *receiver;
 
@@ -157,7 +207,6 @@ static struct lg_mx5500_receiver *lg_mx5500_receiver_create(struct lg_device *de
 	if (!receiver)
 		return NULL;
 
-	receiver->device = device;
 	receiver->keyboard = NULL;
 	receiver->mouse = NULL;
 	receiver->initialized = 0;
@@ -173,66 +222,35 @@ static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
 	if (receiver->mouse)
 		lg_mx_revolution_exit_on_receiver(receiver->mouse);
 
+	lg_device_destroy(&receiver->device);
 	kfree(receiver);
 }
 
-void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
-								size_t count)
+int lg_mx5500_receiver_init_new(struct hid_device *hdev)
 {
-	struct lg_mx5500_receiver *receiver;
-
-	if (count < 4) {
-		lg_device_err(device, "Too few bytes to handle");
-		return;
-	}
-
-	receiver = lg_device_get_receiver(device);
-
-	if(!receiver)
-		return;
-
-	if (buffer[1] == 0xFF) {
-		lg_mx5500_receiver_handle(device, buffer, count);
-	} else if (buffer[2] == 0x41) {
-		lg_mx5500_receiver_logon_device(receiver, buffer, count);
-	} else if (buffer[2] == 0x40) {
-		lg_mx5500_receiver_logoff_device(receiver, buffer, count);
-	} else if (buffer[1] == 0x01) {
-		if (receiver->keyboard)
-			lg_mx5500_keyboard_handle(device, buffer, count);
-		else
-			lg_device_err(device, "received message for keyboard,"
-				"but there isn't any present.\n"
-				"message is 0x%02x 0x%02x 0x%02x",
-				buffer[2], buffer[3], buffer[4]);
-	} else if (buffer[1] == 0x02) {
-		if (receiver->mouse)
-			lg_mx_revolution_handle(device, buffer, count);
-		else
-			lg_device_err(device, "received message for mouse,"
-				"but there isn't any present.\n"
-				"message is 0x%02x 0x%02x 0x%02x",
-				buffer[2], buffer[3], buffer[4]);
-	}
-}
-
-int lg_mx5500_receiver_init(struct lg_device *device)
-{
+	int ret;
 	struct lg_mx5500_receiver *receiver;
 	u8 cmd[7] = { 0x10, 0xFF, LG_DEVICE_ACTION_GET, 0x00, 0x00, 0x00, 0x00 };
 
-	receiver = lg_mx5500_receiver_create(device);
+	receiver = lg_mx5500_receiver_create();
 
 	if (!receiver) {
-		lg_device_err(device, "Can't alloc device\n");
-		return -ENOMEM;
+		hid_err(hdev, "Can't allocate MX5500 receiver\n");
+		ret = -ENOMEM;
+		goto err;
 	}
 
-	lg_device_set_data(device, receiver);
+	ret = lg_device_init(&receiver->device, hdev, &driver);
+	if (ret)
+		goto err_free;
 
-	lg_device_queue_out(device, cmd, sizeof(cmd));
+	lg_device_queue_out(receiver->device, cmd, sizeof(cmd));
 
 	return 0;
+err_free:
+	lg_mx5500_receiver_destroy(receiver);
+err:
+	return ret;
 }
 
 void lg_mx5500_receiver_exit(struct lg_device *device)
@@ -241,16 +259,6 @@ void lg_mx5500_receiver_exit(struct lg_device *device)
 
 	lg_mx5500_receiver_destroy(receiver);
 }
-
-static struct lg_driver driver = {
-	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_RECEIVER) },
-	.init = lg_mx5500_receiver_init,
-	.exit = lg_mx5500_receiver_exit,
-	.receive_handler = lg_mx5500_receiver_hid_receive,
-	.type = LG_MX5500_RECEIVER,
-	.name = "Logitech MX5500 Receiver",
-};
 
 struct lg_driver *lg_mx5500_receiver_get_driver()
 {

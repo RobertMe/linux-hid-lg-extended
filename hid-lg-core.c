@@ -65,14 +65,11 @@ void lg_destroy(struct lg_device *device)
 {
 	if (device->driver)
 		device->driver->exit(device);
-
-	lg_device_destroy(device);
 }
 
 int lg_probe(struct hid_device *hdev,
 				const struct hid_device_id *id)
 {
-	struct lg_device *device;
 	struct lg_driver *driver;
 	unsigned int connect_mask = HID_CONNECT_DEFAULT;
 	int ret;
@@ -83,34 +80,25 @@ int lg_probe(struct hid_device *hdev,
 		goto err;
 	}
 
-	device = lg_device_create(hdev, driver);
-	if (!device) {
-		hid_err(hdev, "Can't alloc device\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
 	ret = hid_parse(hdev);
 	if (ret) {
 		hid_err(hdev, "parse failed\n");
-		goto err_free;
+		goto err;
 	}
 
 	ret = hid_hw_start(hdev, connect_mask);
 	if (ret) {
 		hid_err(hdev, "hw start failed\n");
-		goto err_free;
+		goto err;
 	}
 
-	ret = driver->init(device);
+	ret = driver->init(hdev);
 	if (ret)
 		goto err_stop;
 
 	return 0;
 err_stop:
 	hid_hw_stop(hdev);
-err_free:
-	lg_destroy(device);
 err:
 	return ret;
 }

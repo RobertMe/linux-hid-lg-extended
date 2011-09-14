@@ -3,18 +3,9 @@
 
 #include "hid-lg-mx5500-keyboard.h"
 
-struct lg_mx5500_keyboard {
-	struct lg_device *device;
-	wait_queue_head_t received;
-	u8 devnum;
-	u8 initialized;
-	struct attribute_group attr_group;
+int lg_mx5500_keyboard_init_new(struct hid_device *hdev);
 
-	short battery_level;
-	short lcd_page;
-	short time[3];
-	short date[3];
-};
+void lg_mx5500_keyboard_exit(struct lg_device *device);
 
 struct lg_mx5500_keyboard_handler {
 	u8 action;
@@ -260,12 +251,12 @@ void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
 	}
 
 	if (!handeld)
-		lg_device_err(device, "Unhandeld keyboard message %02x %02x", buffer[2], buffer[3]);
+		lg_device_err((*device), "Unhandeld keyboard message %02x %02x", buffer[2], buffer[3]);
 
 	wake_up_interruptible(&keyboard->received);
 }
 
-struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_device *device, char *name)
+struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(char *name)
 {
 	struct lg_mx5500_keyboard *keyboard;
 
@@ -273,7 +264,6 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_device *device, c
 	if (!keyboard)
 		return NULL;
 
-	keyboard->device = device;
 	keyboard->devnum = 1;
 	keyboard->lcd_page = 0;
 	keyboard->battery_level = -1;
@@ -285,23 +275,36 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(struct lg_device *device, c
 	return keyboard;
 }
 
-int lg_mx5500_keyboard_init(struct lg_device *device)
+static struct lg_driver driver = {
+	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_KEYBOARD) },
+	.init = lg_mx5500_keyboard_init_new,
+	.exit = lg_mx5500_keyboard_exit,
+	.receive_handler = lg_mx5500_keyboard_handle,
+	.type = LG_MX5500_KEYBOARD,
+	.name = "Logitech MX5500",
+};
+
+int lg_mx5500_keyboard_init_new(struct hid_device *hdev)
 {
 	int ret;
 	struct lg_mx5500_keyboard *keyboard;
 
-	keyboard = lg_mx5500_keyboard_create(device, NULL);
+	keyboard = lg_mx5500_keyboard_create(NULL);
 	if (!keyboard) {
 		ret = -ENOMEM;
 		goto error;
 	}
 
-	ret = sysfs_create_group(&device->hdev->dev.kobj,
+	ret = lg_device_init(&keyboard->device, hdev, &driver);
+	if (ret)
+		goto error_free;
+
+	ret = sysfs_create_group(&keyboard->device.hdev->dev.kobj,
 		&keyboard->attr_group);
 	if (ret)
 		goto error_free;
 
-	lg_device_set_data(device, keyboard);
 
 	return ret;
 error_free:
@@ -315,6 +318,7 @@ void lg_mx5500_keyboard_destroy(struct lg_mx5500_keyboard *keyboard)
 	if (!keyboard)
 		return;
 
+	lg_device_destroy(&keyboard->device);
 	kfree(keyboard);
 }
 
@@ -339,19 +343,22 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_init_on_receiver(
 {
 	struct lg_mx5500_keyboard *keyboard;
 
-	keyboard = lg_mx5500_keyboard_create(device, "keyboard");
+	keyboard = lg_mx5500_keyboard_create("keyboard");
 
 	if (!keyboard)
 		goto error;
 
-	if (sysfs_create_group(&device->hdev->dev.kobj,
+	if (lg_device_init_copy(&keyboard->device, device, &driver))
+		goto error_free;
+
+	if (sysfs_create_group(&keyboard->device.hdev->dev.kobj,
 		&keyboard->attr_group))
 		goto error_free;
 
 	return keyboard;
 
 error_free:
-	kfree(keyboard);
+	lg_mx5500_keyboard_destroy(keyboard);
 error:
 	return NULL;
 }
@@ -361,21 +368,11 @@ void lg_mx5500_keyboard_exit_on_receiver(struct lg_mx5500_keyboard *keyboard)
 	if (keyboard == NULL)
 		return;
 
-	sysfs_remove_group(&keyboard->device->hdev->dev.kobj,
+	sysfs_remove_group(&keyboard->device.hdev->dev.kobj,
 				&keyboard->attr_group);
 
 	lg_mx5500_keyboard_destroy(keyboard);
 }
-
-static struct lg_driver driver = {
-	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_KEYBOARD) },
-	.init = lg_mx5500_keyboard_init,
-	.exit = lg_mx5500_keyboard_exit,
-	.receive_handler = lg_mx5500_keyboard_handle,
-	.type = LG_MX5500_KEYBOARD,
-	.name = "Logitech MX5500",
-};
 
 struct lg_driver *lg_mx5500_keyboard_get_driver()
 {

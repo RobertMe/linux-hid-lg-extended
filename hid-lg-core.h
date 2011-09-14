@@ -22,7 +22,7 @@ typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 
 struct lg_driver {
 	struct hid_device_id device_id;
-	int (*init)(struct lg_device *device);
+	int (*init)(struct hid_device *hdev);
 	void (*exit)(struct lg_device *device);
 	lg_device_hid_receive_handler receive_handler;
 	enum lg_devices type;

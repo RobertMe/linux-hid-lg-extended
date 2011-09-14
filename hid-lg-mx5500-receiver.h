@@ -10,13 +10,11 @@ struct lg_mx5500_receiver {
 	u8 initialized;
 	u8 max_devices;
 
-	struct lg_device *device;
+	struct lg_device device;
 
 	struct lg_mx5500_keyboard *keyboard;
 	struct lg_mx_revolution *mouse;
 };
-
-int lg_mx5500_receiver_init(struct lg_device *device);
 
 void lg_mx5500_receiver_exit(struct lg_device *device);
 

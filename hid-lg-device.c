@@ -8,21 +8,11 @@
 #include "hid-lg-mx5500-receiver.h"
 #include "hid-lg-mx5500-keyboard.h"
 
-void lg_device_set_data(struct lg_device *device, void *data)
-{
-	device->data = data;
-}
-
-void *lg_device_get_data(struct lg_device *device)
-{
-	return device->data;
-}
-
 struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device)
 {
 	struct lg_mx5500_receiver *receiver = NULL;
 	if (device->driver->type == LG_MX5500_RECEIVER)
-		receiver = lg_device_get_data(device);
+		receiver = container_of(device, struct lg_mx5500_receiver, device);
 
 	return receiver;
 }
@@ -31,7 +21,7 @@ struct lg_mx5500_keyboard *lg_device_get_keyboard(struct lg_device *device)
 {
 	struct lg_mx5500_keyboard *keyboard = NULL;
 	if (device->driver->type == LG_MX5500_KEYBOARD)
-		keyboard = lg_device_get_data(device);
+		keyboard = container_of(device, struct lg_mx5500_keyboard, device);
 	else if (device->driver->type == LG_MX5500_RECEIVER)
 		keyboard = ((struct lg_mx5500_receiver*)lg_device_get_receiver(device))->keyboard;
 
@@ -42,7 +32,7 @@ struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device)
 {
 	struct lg_mx_revolution *mouse = NULL;
 	if (device->driver->type == LG_MX5500_MOUSE)
-		mouse = lg_device_get_data(device);
+		mouse = container_of(device, struct lg_mx_revolution, device);
 	else if (device->driver->type == LG_MX5500_RECEIVER)
 		mouse = ((struct lg_mx5500_receiver*)lg_device_get_receiver(device))->mouse;
 
@@ -155,25 +145,24 @@ int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 	return 0;
 }
 
-struct lg_device *lg_device_create(struct hid_device *hdev,
+int lg_device_init(struct lg_device *device,
+					struct hid_device *hdev,
 					struct lg_driver *driver)
 {
-	struct lg_device *device;
-
-	device = kzalloc(sizeof(*device), GFP_KERNEL);
-	if (!device)
-		goto err;
-
+	int ret;
 	device->out_queue = kzalloc(sizeof(*device->out_queue), GFP_KERNEL);
-	if (!device->out_queue)
+	if (!device->out_queue) {
+		ret = -ENOMEM;
 		goto err_free_dev;
+	}
 
 	device->in_queue = kzalloc(sizeof(*device->in_queue), GFP_KERNEL);
-	if (!device->in_queue)
+	if (!device->in_queue) {
+		ret = -ENOMEM;
 		goto err_free_out;
+	}
 
 	device->hdev = hdev;
-	device->data = NULL;
 	device->driver = driver;
 	hid_set_drvdata(hdev, device);
 
@@ -185,20 +174,42 @@ struct lg_device *lg_device_create(struct hid_device *hdev,
 	spin_lock_init(&device->in_queue->qlock);
 	INIT_WORK(&device->in_queue->worker, lg_device_receive_worker);
 
-	return device;
+	return 0;
 err_free_out:
 	kfree(device->out_queue);
 err_free_dev:
 	kfree(device);
-err:
-	return NULL;
+	return ret;
+}
+
+int lg_device_init_copy(struct lg_device *device,
+					struct lg_device *from,
+					struct lg_driver *driver)
+{
+	device->out_queue = from->out_queue;
+	device->in_queue = from->in_queue;
+	device->hdev = from->hdev;
+	device->driver = driver;
+
+	return 0;
 }
 
 void lg_device_destroy(struct lg_device *device)
 {
-	cancel_work_sync(&device->in_queue->worker);
-	cancel_work_sync(&device->out_queue->worker);
-	kfree(device->in_queue);
-	kfree(device->out_queue);
-	kfree(device);
+	if (device->in_queue) {
+		if (device != device->in_queue->main_device)
+			return;
+	} else if (device->out_queue) {
+		if (device != device->out_queue->main_device)
+			return;
+	}
+	if (device->in_queue && device->out_queue) {
+		cancel_work_sync(&device->in_queue->worker);
+		cancel_work_sync(&device->out_queue->worker);
+	}
+
+	if (device->in_queue)
+		kfree(device->in_queue);
+	if (device->out_queue)
+		kfree(device->out_queue);
 }
