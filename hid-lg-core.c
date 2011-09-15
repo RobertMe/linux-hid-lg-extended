@@ -14,21 +14,34 @@ void lg_remove(struct hid_device *hdev);
 int lg_register_driver(struct lg_driver *driver)
 {
 	int ret;
-	struct hid_device_id device_ids[2];
+	struct hid_device_id *device_ids;
 
-	list_add(&driver->list, &drivers.list);
+	device_ids = kzalloc(sizeof(struct hid_device_id) * 2, GFP_KERNEL);
+	if (!device_ids) {
+		ret = -ENOMEM;
+		goto error;
+	}
 
-	device_ids[0] = driver->device_id;
+	memcpy(device_ids, &driver->device_id, sizeof(driver->device_id));
+	memset(&device_ids[1], 0, sizeof(struct hid_device_id));
 	driver->hid_driver.name = driver->name;
 	driver->hid_driver.id_table = device_ids;
 	driver->hid_driver.probe = lg_probe;
 	driver->hid_driver.remove = lg_remove;
 	driver->hid_driver.raw_event = lg_device_event;
 
-	ret = hid_register_driver(&driver->hid_driver);
-	if (ret)
-		pr_err("Can't register %s hid driver\n", driver->name);
+	list_add(&driver->list, &drivers.list);
 
+	ret = hid_register_driver(&driver->hid_driver);
+	if (ret) {
+		pr_err("Can't register %s hid driver\n", driver->name);
+		goto error_free;
+	}
+
+	return 0;
+error_free:
+	kfree(device_ids);
+error:
 	return ret;
 }
 
@@ -36,6 +49,7 @@ void lg_unregister_driver(struct lg_driver *driver)
 {
 	list_del(&driver->list);
 	hid_unregister_driver(&driver->hid_driver);
+	kfree(driver->hid_driver.id_table);
 	if (list_empty(&driver->list))
 		INIT_LIST_HEAD(&drivers.list);
 }
