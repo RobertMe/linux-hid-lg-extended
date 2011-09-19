@@ -5,6 +5,10 @@
 
 int lg_mx_revolution_init_new(struct hid_device *hdev);
 
+struct lg_device *lg_mx_revolution_init_on_receiver(
+			struct lg_device *device,
+			const u8 *buffer, size_t count);
+
 void lg_mx_revolution_exit(struct lg_device *device);
 
 void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
@@ -18,6 +22,7 @@ static struct lg_driver driver = {
 	.device_code = 0xb0,
 
 	.init = lg_mx_revolution_init_new,
+	.init_on_receiver = lg_mx_revolution_init_on_receiver,
 	.exit = lg_mx_revolution_exit,
 	.receive_handler = lg_mx_revolution_handle,
 };
@@ -322,7 +327,7 @@ void lg_mx_revolution_exit(struct lg_device *device)
 	lg_mx_revolution_destroy(mouse);
 }
 
-struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
+struct lg_device *lg_mx_revolution_init_on_receiver(
 			struct lg_device *device,
 			const u8 *buffer, size_t count)
 {
@@ -341,21 +346,11 @@ struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
 		&mouse->attr_group))
 		goto error_free;
 
-	return mouse;
+	return &mouse->device;
 error_free:
 	lg_mx_revolution_destroy(mouse);
 error:
 	return NULL;
-}
-
-void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse)
-{
-	if (mouse == NULL)
-		return;
-
-	sysfs_remove_group(&mouse->device.hdev->dev.kobj,
-				&mouse->attr_group);
-	lg_mx_revolution_destroy(mouse);
 }
 
 struct lg_driver *lg_mx_revolution_get_driver()

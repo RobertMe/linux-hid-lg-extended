@@ -5,6 +5,10 @@
 
 int lg_mx5500_keyboard_init_new(struct hid_device *hdev);
 
+struct lg_device *lg_mx5500_keyboard_init_on_receiver(
+			struct lg_device *device,
+			const u8 *buffer, size_t count);
+
 void lg_mx5500_keyboard_exit(struct lg_device *device);
 
 void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
@@ -18,6 +22,7 @@ static struct lg_driver driver = {
 	.device_code = 0xb3,
 
 	.init = lg_mx5500_keyboard_init_new,
+	.init_on_receiver = lg_mx5500_keyboard_init_on_receiver,
 	.exit = lg_mx5500_keyboard_exit,
 	.receive_handler = lg_mx5500_keyboard_handle,
 };
@@ -344,7 +349,7 @@ void lg_mx5500_keyboard_exit(struct lg_device *device)
 	lg_mx5500_keyboard_destroy(keyboard);
 }
 
-struct lg_mx5500_keyboard *lg_mx5500_keyboard_init_on_receiver(
+struct lg_device *lg_mx5500_keyboard_init_on_receiver(
 			struct lg_device *device,
 			const u8 *buffer, size_t count)
 {
@@ -362,23 +367,12 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_init_on_receiver(
 		&keyboard->attr_group))
 		goto error_free;
 
-	return keyboard;
+	return &keyboard->device;
 
 error_free:
 	lg_mx5500_keyboard_destroy(keyboard);
 error:
 	return NULL;
-}
-
-void lg_mx5500_keyboard_exit_on_receiver(struct lg_mx5500_keyboard *keyboard)
-{
-	if (keyboard == NULL)
-		return;
-
-	sysfs_remove_group(&keyboard->device.hdev->dev.kobj,
-				&keyboard->attr_group);
-
-	lg_mx5500_keyboard_destroy(keyboard);
 }
 
 struct lg_driver *lg_mx5500_keyboard_get_driver()

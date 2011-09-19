@@ -19,15 +19,6 @@ struct lg_mx5500_keyboard {
 	short date[3];
 };
 
-void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
-								size_t count);
-
-struct lg_mx5500_keyboard *lg_mx5500_keyboard_init_on_receiver(
-			struct lg_device *device,
-			const u8 *buffer, size_t count);
-
-void lg_mx5500_keyboard_exit_on_receiver(struct lg_mx5500_keyboard *keyboard);
-
 struct lg_driver *lg_mx5500_keyboard_get_driver(void);
 
 #endif

@@ -36,6 +36,30 @@ struct lg_device *lg_find_device_on_device(struct device *device,
 	return lg_find_device_on_lg_device(lg_device, device_id);
 }
 
+struct lg_device *lg_create_on_receiver(struct lg_device *receiver,
+					u8 device_code,
+					const u8 *buffer, size_t count)
+{
+	struct lg_driver *driver;
+	u8 found;
+
+	list_for_each_entry(driver, &drivers.list, list)
+	{
+		if (driver->device_code == device_code) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found)
+		return NULL;
+
+	if (!driver->init_on_receiver)
+		return NULL;
+
+	return driver->init_on_receiver(receiver, buffer, count);
+}
+
 int lg_register_driver(struct lg_driver *driver)
 {
 	int ret;

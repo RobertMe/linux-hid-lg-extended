@@ -28,15 +28,6 @@ enum lg_mx5500_scrollmode {
 	LG_MX5500_SCROLLMODE_BUTTON_TOGGLE = 0x08,
 };
 
-void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
-								size_t count);
-
-struct lg_mx_revolution *lg_mx_revolution_init_on_receiver(
-			struct lg_device *device,
-			const u8 *buffer, size_t count);
-
-void lg_mx_revolution_exit_on_receiver(struct lg_mx_revolution *mouse);
-
 struct lg_driver *lg_mx_revolution_get_driver(void);
 
 #endif

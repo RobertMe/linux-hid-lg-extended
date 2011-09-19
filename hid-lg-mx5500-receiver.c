@@ -70,41 +70,50 @@ static void lg_mx5500_receiver_set_max_devices(struct lg_mx5500_receiver *receiv
 static void lg_mx5500_receiver_logon_device(struct lg_mx5500_receiver *receiver,
 						const u8 *buffer, size_t count)
 {
-	switch (buffer[1]) {
-	case 0x01:
-		if (receiver->keyboard) {
-			lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
-		}
-		receiver->keyboard = lg_mx5500_keyboard_init_on_receiver(
-					&receiver->device, buffer, count);
-		break;
-	case 0x02:
-		if (receiver->keyboard) {
-			lg_mx_revolution_exit_on_receiver(receiver->mouse);
-		}
-		receiver->mouse = lg_mx_revolution_init_on_receiver(
-					&receiver->device, buffer, count);
-		break;
-	}
+	int pos;
+	int code;
+	struct lg_device *new_device;
+	if (count < 7)
+		return;
+
+	pos = buffer[1];
+	if (pos < 1 || pos > LG_MX5500_RECEIVER_MAX_DEVICES)
+		return;
+
+	if (receiver->connected_devices[pos])
+		receiver->connected_devices[pos]->driver->exit(
+			receiver->connected_devices[pos]);
+
+	code = buffer[6];
+	new_device = lg_create_on_receiver(&receiver->device, code,
+					   buffer, count);
+	if (!new_device)
+		lg_device_err(receiver->device, "Couldn't initialize new device "
+			"with code 0x%02x", code);
+
+	receiver->connected_devices[pos] = new_device;
 }
 
 static void lg_mx5500_receiver_logoff_device(struct lg_mx5500_receiver *receiver,
 						const u8 *buffer, size_t count)
 {
-	switch (buffer[1]) {
-	case 0x01:
-		if (receiver->keyboard) {
-			lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
-			receiver->keyboard = NULL;
-		}
-		break;
-	case 0x02:
-		if (receiver->mouse) {
-			lg_mx_revolution_exit_on_receiver(receiver->mouse);
-			receiver->mouse = NULL;
-		}
-		break;
-	}
+	struct lg_device *device;
+	int pos;
+
+	if (count < 2)
+		return;
+
+	pos = buffer[1];
+	if (pos < 1 || pos > LG_MX5500_RECEIVER_MAX_DEVICES)
+		return;
+
+	device = receiver->connected_devices[pos];
+	if (!device)
+		return;
+
+	device->driver->exit(device);
+
+	receiver->connected_devices[pos] = NULL;
 }
 
 static void lg_mx5500_receiver_devices_logon(struct lg_mx5500_receiver *receiver)
@@ -176,6 +185,20 @@ void lg_mx5500_receiver_handle(struct lg_device *device, const u8 *buffer,
 		lg_device_err(receiver->device, "Unhandeld receiver message %02x %02x", buffer[2], buffer[3]);
 }
 
+static void lg_mx5500_receiver_handle_on_device(struct lg_mx5500_receiver *receiver,
+					 const u8 *buffer, size_t count)
+{
+	struct lg_device *handling_device;
+
+	handling_device = receiver->connected_devices[buffer[1]];
+
+	if (!handling_device)
+		return;
+
+	handling_device->driver->receive_handler(handling_device,
+						 buffer, count);
+}
+
 void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
 								size_t count)
 {
@@ -195,22 +218,8 @@ void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
 		lg_mx5500_receiver_logon_device(receiver, buffer, count);
 	} else if (buffer[2] == 0x40) {
 		lg_mx5500_receiver_logoff_device(receiver, buffer, count);
-	} else if (buffer[1] == 0x01) {
-		if (receiver->keyboard)
-			lg_mx5500_keyboard_handle(device, buffer, count);
-		else
-			lg_device_err((*device), "received message for keyboard,"
-				"but there isn't any present.\n"
-				"message is 0x%02x 0x%02x 0x%02x",
-				buffer[2], buffer[3], buffer[4]);
-	} else if (buffer[1] == 0x02) {
-		if (receiver->mouse)
-			lg_mx_revolution_handle(device, buffer, count);
-		else
-			lg_device_err((*device), "received message for mouse,"
-				"but there isn't any present.\n"
-				"message is 0x%02x 0x%02x 0x%02x",
-				buffer[2], buffer[3], buffer[4]);
+	} else if (buffer[1] >= 1 && buffer[1] <= LG_MX5500_RECEIVER_MAX_DEVICES) {
+		lg_mx5500_receiver_handle_on_device(receiver, buffer, count);
 	}
 }
 
@@ -219,23 +228,17 @@ struct lg_device *lg_mx5500_receiver_find_device(struct lg_device *device,
 {
 	struct lg_mx5500_receiver *receiver = get_on_lg_device(device);
 	struct lg_driver *compare_driver;
+	int i;
 
-	if (receiver->keyboard)
-	{
-		compare_driver = receiver->keyboard->device.driver;
+	for (i = 0; i < LG_MX5500_RECEIVER_MAX_DEVICES; i++) {
+		if (!receiver->connected_devices[i])
+			continue;
+
+		compare_driver = receiver->connected_devices[i]->driver;
 		if (compare_driver->device_id.bus == device_id.bus &&
 			compare_driver->device_id.vendor == device_id.vendor &&
 			compare_driver->device_id.product == device_id.product)
-			return &receiver->keyboard->device;
-	}
-
-	if (receiver->mouse)
-	{
-		compare_driver = receiver->mouse->device.driver;
-		if (compare_driver->device_id.bus == device_id.bus &&
-			compare_driver->device_id.vendor == device_id.vendor &&
-			compare_driver->device_id.product == device_id.product)
-			return &receiver->mouse->device;
+			return receiver->connected_devices[i];
 	}
 
 	return NULL;
@@ -244,13 +247,16 @@ struct lg_device *lg_mx5500_receiver_find_device(struct lg_device *device,
 static struct lg_mx5500_receiver *lg_mx5500_receiver_create(void)
 {
 	struct lg_mx5500_receiver *receiver;
+	int i;
 
 	receiver = kzalloc(sizeof(*receiver), GFP_KERNEL);
 	if (!receiver)
 		return NULL;
 
-	receiver->keyboard = NULL;
-	receiver->mouse = NULL;
+	for (i = 0; i < LG_MX5500_RECEIVER_MAX_DEVICES; i++) {
+		receiver->connected_devices[i] = NULL;
+	}
+
 	receiver->initialized = 0;
 
 	return receiver;
@@ -258,11 +264,13 @@ static struct lg_mx5500_receiver *lg_mx5500_receiver_create(void)
 
 static void lg_mx5500_receiver_destroy(struct lg_mx5500_receiver *receiver)
 {
-	if (receiver->keyboard)
-		lg_mx5500_keyboard_exit_on_receiver(receiver->keyboard);
-
-	if (receiver->mouse)
-		lg_mx_revolution_exit_on_receiver(receiver->mouse);
+	int i;
+	for (i = 0; i < LG_MX5500_RECEIVER_MAX_DEVICES; i++) {
+		if (receiver->connected_devices[i]) {
+			receiver->connected_devices[i]->driver->exit(
+				receiver->connected_devices[i]);
+		}
+	}
 
 	lg_device_destroy(&receiver->device);
 	kfree(receiver);
