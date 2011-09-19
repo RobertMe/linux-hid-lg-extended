@@ -190,13 +190,15 @@ void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
 }
 
 static struct lg_driver driver = {
+	.type = LG_MX5500_RECEIVER,
+	.name = "Logitech MX5500 Receiver",
 	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_RECEIVER) },
+	.device_code = LG_DRIVER_NO_CODE,
+
 	.init = lg_mx5500_receiver_init_new,
 	.exit = lg_mx5500_receiver_exit,
 	.receive_handler = lg_mx5500_receiver_hid_receive,
-	.type = LG_MX5500_RECEIVER,
-	.name = "Logitech MX5500 Receiver",
 };
 
 static struct lg_mx5500_receiver *lg_mx5500_receiver_create(void)

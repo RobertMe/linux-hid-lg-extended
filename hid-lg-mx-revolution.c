@@ -236,13 +236,15 @@ void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
 }
 
 static struct lg_driver driver = {
+	.type = LG_MX5500_MOUSE,
+	.name = "Logitech MX Revolution",
 	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_MOUSE) },
+	.device_code = 0xb0,
+
 	.init = lg_mx_revolution_init_new,
 	.exit = lg_mx_revolution_exit,
 	.receive_handler = lg_mx_revolution_handle,
-	.type = LG_MX5500_MOUSE,
-	.name = "Logitech MX Revolution",
 };
 
 struct lg_mx_revolution *lg_mx_revolution_create(char *name)

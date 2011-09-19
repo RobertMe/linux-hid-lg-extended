@@ -276,13 +276,15 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(char *name)
 }
 
 static struct lg_driver driver = {
+	.type = LG_MX5500_KEYBOARD,
+	.name = "Logitech MX5500",
 	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_KEYBOARD) },
+	.device_code = 0xb3,
+
 	.init = lg_mx5500_keyboard_init_new,
 	.exit = lg_mx5500_keyboard_exit,
 	.receive_handler = lg_mx5500_keyboard_handle,
-	.type = LG_MX5500_KEYBOARD,
-	.name = "Logitech MX5500",
 };
 
 int lg_mx5500_keyboard_init_new(struct hid_device *hdev)

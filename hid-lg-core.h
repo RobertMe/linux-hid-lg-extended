@@ -9,6 +9,8 @@
 #define USB_DEVICE_ID_MX5500_KEYBOARD   0xb30b
 #define USB_DEVICE_ID_MX5500_MOUSE      0xb007
 
+#define LG_DRIVER_NO_CODE 0x00
+
 struct lg_device;
 
 enum lg_devices {
@@ -21,13 +23,15 @@ typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 					  const u8 *payload, size_t size);
 
 struct lg_driver {
+	enum lg_devices type;
+	char *name;
 	struct hid_device_id device_id;
+	struct hid_driver hid_driver;
+	u8 device_code;
+
 	int (*init)(struct hid_device *hdev);
 	void (*exit)(struct lg_device *device);
 	lg_device_hid_receive_handler receive_handler;
-	enum lg_devices type;
-	char *name;
-	struct hid_driver hid_driver;
 
 	struct list_head list;
 };
