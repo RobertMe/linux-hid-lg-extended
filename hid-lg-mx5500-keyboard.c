@@ -7,17 +7,34 @@ int lg_mx5500_keyboard_init_new(struct hid_device *hdev);
 
 void lg_mx5500_keyboard_exit(struct lg_device *device);
 
+void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
+								size_t count);
+
+static struct lg_driver driver = {
+	.type = LG_MX5500_KEYBOARD,
+	.name = "Logitech MX5500",
+	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_KEYBOARD) },
+	.device_code = 0xb3,
+
+	.init = lg_mx5500_keyboard_init_new,
+	.exit = lg_mx5500_keyboard_exit,
+	.receive_handler = lg_mx5500_keyboard_handle,
+};
+
+#define get_on_lg_device(device) container_of( 				\
+			lg_find_device_on_lg_device(device, driver.device_id),\
+			struct lg_mx5500_keyboard, device)
+
+#define get_on_device(device) container_of( 				\
+			lg_find_device_on_device(device, driver.device_id),\
+			struct lg_mx5500_keyboard, device)
+
 struct lg_mx5500_keyboard_handler {
 	u8 action;
 	u8 first;
 	void (*func)(struct lg_mx5500_keyboard *keyboard, const u8 *payload, size_t size);
 };
-
-static inline struct lg_mx5500_keyboard *lg_mx5500_keyboard_get_from_device(
-			struct device *device)
-{
-	return lg_device_get_keyboard(dev_get_drvdata(device));
-}
 
 static int lg_mx5500_keyboard_request_battery(struct lg_mx5500_keyboard *keyboard)
 {
@@ -61,7 +78,7 @@ static int lg_mx5500_keyboard_request_date(struct lg_mx5500_keyboard *keyboard)
 static ssize_t keyboard_show_battery(struct device *device,
 			struct device_attribute *attr, char *buf)
 {
-	struct lg_mx5500_keyboard *keyboard = lg_mx5500_keyboard_get_from_device(device);
+	struct lg_mx5500_keyboard *keyboard = get_on_device(device);
 
 	if (lg_mx5500_keyboard_request_battery(keyboard))
 		return 0;
@@ -76,7 +93,7 @@ static ssize_t keyboard_show_lcd_page(struct device *device,
 {
 	struct lg_mx5500_keyboard *keyboard;
 
-	keyboard = lg_mx5500_keyboard_get_from_device(device);
+	keyboard = get_on_device(device);
 
 	return scnprintf(buf, PAGE_SIZE, "%d\n", keyboard->lcd_page);
 }
@@ -86,7 +103,7 @@ static DEVICE_ATTR(lcd_page, S_IRUGO, keyboard_show_lcd_page, NULL);
 static ssize_t keyboard_show_time(struct device *device,
 		struct device_attribute *attr, char *buf)
 {
-	struct lg_mx5500_keyboard *keyboard = lg_mx5500_keyboard_get_from_device(device);
+	struct lg_mx5500_keyboard *keyboard = get_on_device(device);
 
 	if (lg_mx5500_keyboard_request_time(keyboard))
 		return 0;
@@ -103,7 +120,7 @@ static ssize_t keyboard_store_time(struct device *device,
 	int err;
 	short second, minute, hour;
 
-	keyboard = lg_mx5500_keyboard_get_from_device(device);
+	keyboard = get_on_device(device);
 	err = sscanf(buf, "%02hi:%02hi:%02hi", &hour, &minute, &second);
 	if (err < 0)
 		return err;
@@ -125,7 +142,7 @@ static DEVICE_ATTR(time, S_IRUGO | S_IWUGO, keyboard_show_time, keyboard_store_t
 static ssize_t keyboard_show_date(struct device *device,
 		struct device_attribute *attr, char *buf)
 {
-	struct lg_mx5500_keyboard *keyboard = lg_mx5500_keyboard_get_from_device(device);
+	struct lg_mx5500_keyboard *keyboard = get_on_device(device);
 
 	if (lg_mx5500_keyboard_request_date(keyboard))
 		return 0;
@@ -143,7 +160,7 @@ static ssize_t keyboard_store_date(struct device *device,
 	int err;
 	short day, month, year;
 
-	keyboard = lg_mx5500_keyboard_get_from_device(device);
+	keyboard = get_on_device(device);
 	err = sscanf(buf, "%02hi %02hi %02hi", &year, &month, &day);
 	if (err < 0)
 		return err;
@@ -237,7 +254,7 @@ void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
 	struct lg_mx5500_keyboard *keyboard;
 	struct lg_mx5500_keyboard_handler *handler;
 
-	keyboard = lg_device_get_keyboard(device);
+	keyboard = get_on_lg_device(device);
 
 	for (i = 0; lg_mx5500_keyboard_handlers[i].action ||
 		lg_mx5500_keyboard_handlers[i].first; i++) {
@@ -274,18 +291,6 @@ struct lg_mx5500_keyboard *lg_mx5500_keyboard_create(char *name)
 
 	return keyboard;
 }
-
-static struct lg_driver driver = {
-	.type = LG_MX5500_KEYBOARD,
-	.name = "Logitech MX5500",
-	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_KEYBOARD) },
-	.device_code = 0xb3,
-
-	.init = lg_mx5500_keyboard_init_new,
-	.exit = lg_mx5500_keyboard_exit,
-	.receive_handler = lg_mx5500_keyboard_handle,
-};
 
 int lg_mx5500_keyboard_init_new(struct hid_device *hdev)
 {
@@ -328,7 +333,7 @@ void lg_mx5500_keyboard_exit(struct lg_device *device)
 {
 	struct lg_mx5500_keyboard *keyboard;
 
-	keyboard = lg_device_get_keyboard(device);
+	keyboard = get_on_lg_device(device);
 
 	if (keyboard == NULL)
 		return;

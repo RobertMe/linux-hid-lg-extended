@@ -11,6 +11,31 @@ int lg_probe(struct hid_device *hdev,
 
 void lg_remove(struct hid_device *hdev);
 
+struct lg_device *lg_find_device_on_lg_device(struct lg_device *device,
+				       struct hid_device_id device_id)
+{
+	if (device->driver->device_id.bus == device_id.bus &&
+		device->driver->device_id.vendor == device_id.vendor &&
+		device->driver->device_id.product == device_id.product)
+		return device;
+
+	if (device->driver->find_device)
+		return device->driver->find_device(device, device_id);
+
+	return NULL;
+}
+
+struct lg_device *lg_find_device_on_device(struct device *device,
+				       struct hid_device_id device_id)
+{
+	struct lg_device *lg_device = dev_get_drvdata(device);
+
+	if (!lg_device)
+		return NULL;
+
+	return lg_find_device_on_lg_device(lg_device, device_id);
+}
+
 int lg_register_driver(struct lg_driver *driver)
 {
 	int ret;

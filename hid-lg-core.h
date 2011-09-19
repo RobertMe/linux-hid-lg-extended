@@ -32,9 +32,17 @@ struct lg_driver {
 	int (*init)(struct hid_device *hdev);
 	void (*exit)(struct lg_device *device);
 	lg_device_hid_receive_handler receive_handler;
+	struct lg_device *(*find_device)(struct lg_device *device,
+					 struct hid_device_id device_id);
 
 	struct list_head list;
 };
+
+struct lg_device *lg_find_device_on_lg_device(struct lg_device *device,
+				       struct hid_device_id device_id);
+
+struct lg_device *lg_find_device_on_device(struct device *device,
+				       struct hid_device_id device_id);
 
 int lg_register_driver(struct lg_driver *driver);
 

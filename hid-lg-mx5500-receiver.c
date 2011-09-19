@@ -8,6 +8,31 @@
 
 int lg_mx5500_receiver_init_new(struct hid_device *hdev);
 
+void lg_mx5500_receiver_exit(struct lg_device *device);
+
+void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
+								size_t count);
+
+struct lg_device *lg_mx5500_receiver_find_device(struct lg_device *device,
+						 struct hid_device_id device_id);
+
+static struct lg_driver driver = {
+	.type = LG_MX5500_RECEIVER,
+	.name = "Logitech MX5500 Receiver",
+	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
+			USB_DEVICE_ID_MX5500_RECEIVER) },
+	.device_code = LG_DRIVER_NO_CODE,
+
+	.init = lg_mx5500_receiver_init_new,
+	.exit = lg_mx5500_receiver_exit,
+	.receive_handler = lg_mx5500_receiver_hid_receive,
+	.find_device = lg_mx5500_receiver_find_device,
+};
+
+#define get_on_lg_device(device) container_of( 				\
+			lg_find_device_on_lg_device(device, driver.device_id),\
+			struct lg_mx5500_receiver, device)
+
 struct lg_mx5500_receiver_handler {
 	u8 action;
 	u8 first;
@@ -134,7 +159,7 @@ void lg_mx5500_receiver_handle(struct lg_device *device, const u8 *buffer,
 	struct lg_mx5500_receiver *receiver;
 	struct lg_mx5500_receiver_handler *handler;
 
-	receiver = lg_device_get_receiver(device);
+	receiver = get_on_lg_device(device);
 
 	for (i = 0; lg_mx5500_receiver_handlers[i].action ||
 		lg_mx5500_receiver_handlers[i].first; i++) {
@@ -154,7 +179,7 @@ void lg_mx5500_receiver_handle(struct lg_device *device, const u8 *buffer,
 void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
 								size_t count)
 {
-	struct lg_mx5500_receiver *receiver = lg_device_get_receiver(device);
+	struct lg_mx5500_receiver *receiver = get_on_lg_device(device);
 
 	if (count < 4) {
 		lg_device_err((*device), "Too few bytes to handle");
@@ -189,17 +214,32 @@ void lg_mx5500_receiver_hid_receive(struct lg_device *device, const u8 *buffer,
 	}
 }
 
-static struct lg_driver driver = {
-	.type = LG_MX5500_RECEIVER,
-	.name = "Logitech MX5500 Receiver",
-	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_RECEIVER) },
-	.device_code = LG_DRIVER_NO_CODE,
+struct lg_device *lg_mx5500_receiver_find_device(struct lg_device *device,
+						 struct hid_device_id device_id)
+{
+	struct lg_mx5500_receiver *receiver = get_on_lg_device(device);
+	struct lg_driver *compare_driver;
 
-	.init = lg_mx5500_receiver_init_new,
-	.exit = lg_mx5500_receiver_exit,
-	.receive_handler = lg_mx5500_receiver_hid_receive,
-};
+	if (receiver->keyboard)
+	{
+		compare_driver = receiver->keyboard->device.driver;
+		if (compare_driver->device_id.bus == device_id.bus &&
+			compare_driver->device_id.vendor == device_id.vendor &&
+			compare_driver->device_id.product == device_id.product)
+			return &receiver->keyboard->device;
+	}
+
+	if (receiver->mouse)
+	{
+		compare_driver = receiver->mouse->device.driver;
+		if (compare_driver->device_id.bus == device_id.bus &&
+			compare_driver->device_id.vendor == device_id.vendor &&
+			compare_driver->device_id.product == device_id.product)
+			return &receiver->mouse->device;
+	}
+
+	return NULL;
+}
 
 static struct lg_mx5500_receiver *lg_mx5500_receiver_create(void)
 {
@@ -257,7 +297,7 @@ err:
 
 void lg_mx5500_receiver_exit(struct lg_device *device)
 {
-	struct lg_mx5500_receiver *receiver= lg_device_get_receiver(device);
+	struct lg_mx5500_receiver *receiver= get_on_lg_device(device);
 
 	lg_mx5500_receiver_destroy(receiver);
 }

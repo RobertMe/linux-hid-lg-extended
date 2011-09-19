@@ -64,12 +64,6 @@ void lg_device_send_worker(struct work_struct *work);
 
 void lg_device_receive_worker(struct work_struct *work);
 
-struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device);
-
-struct lg_mx5500_keyboard *lg_device_get_keyboard(struct lg_device *device);
-
-struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device);
-
 int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 				u8 *raw_data, int size);
 

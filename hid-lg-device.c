@@ -8,37 +8,6 @@
 #include "hid-lg-mx5500-receiver.h"
 #include "hid-lg-mx5500-keyboard.h"
 
-struct lg_mx5500_receiver *lg_device_get_receiver(struct lg_device *device)
-{
-	struct lg_mx5500_receiver *receiver = NULL;
-	if (device->driver->type == LG_MX5500_RECEIVER)
-		receiver = container_of(device, struct lg_mx5500_receiver, device);
-
-	return receiver;
-}
-
-struct lg_mx5500_keyboard *lg_device_get_keyboard(struct lg_device *device)
-{
-	struct lg_mx5500_keyboard *keyboard = NULL;
-	if (device->driver->type == LG_MX5500_KEYBOARD)
-		keyboard = container_of(device, struct lg_mx5500_keyboard, device);
-	else if (device->driver->type == LG_MX5500_RECEIVER)
-		keyboard = ((struct lg_mx5500_receiver*)lg_device_get_receiver(device))->keyboard;
-
-	return keyboard;
-}
-
-struct lg_mx_revolution *lg_device_get_mouse(struct lg_device *device)
-{
-	struct lg_mx_revolution *mouse = NULL;
-	if (device->driver->type == LG_MX5500_MOUSE)
-		mouse = container_of(device, struct lg_mx_revolution, device);
-	else if (device->driver->type == LG_MX5500_RECEIVER)
-		mouse = ((struct lg_mx5500_receiver*)lg_device_get_receiver(device))->mouse;
-
-	return mouse;
-}
-
 void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue, const u8 *buffer,
 								size_t count)
 {
