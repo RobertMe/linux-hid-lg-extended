@@ -79,6 +79,14 @@ static ssize_t mouse_show_battery(struct device *device,
 
 static DEVICE_ATTR(battery, S_IRUGO, mouse_show_battery, NULL);
 
+static ssize_t mouse_show_name(struct device *device,
+			struct device_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.name);
+}
+
+static DEVICE_ATTR(name, S_IRUGO, mouse_show_name, NULL);
+
 static ssize_t mouse_show_scrollmode(struct device *device,
 			struct device_attribute *attr, char *buf)
 {
@@ -198,6 +206,7 @@ static DEVICE_ATTR(scrollmode, S_IRUGO | S_IWUGO, mouse_show_scrollmode, mouse_s
 
 static struct attribute *mouse_attrs[] = {
 	&dev_attr_battery.attr,
+	&dev_attr_name.attr,
 	&dev_attr_scrollmode.attr,
 	NULL,
 };

@@ -45,6 +45,9 @@ struct lg_device *lg_create_on_receiver(struct lg_device *receiver,
 
 	list_for_each_entry(driver, &drivers.list, list)
 	{
+		if (driver->device_code == LG_DRIVER_NO_CODE)
+			continue;
+
 		if (driver->device_code == device_code) {
 			found = 1;
 			break;
