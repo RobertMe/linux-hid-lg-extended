@@ -13,17 +13,10 @@
 
 struct lg_device;
 
-enum lg_devices {
-	LG_MX5500_RECEIVER,
-	LG_MX5500_KEYBOARD,
-	LG_MX5500_MOUSE,
-};
-
 typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 					  const u8 *payload, size_t size);
 
 struct lg_driver {
-	enum lg_devices type;
 	char *name;
 	struct hid_device_id device_id;
 	struct hid_driver hid_driver;

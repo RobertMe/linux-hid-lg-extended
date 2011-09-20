@@ -17,7 +17,6 @@ struct lg_device *lg_mx5500_receiver_find_device(struct lg_device *device,
 						 struct hid_device_id device_id);
 
 static struct lg_driver driver = {
-	.type = LG_MX5500_RECEIVER,
 	.name = "Logitech MX5500 Receiver",
 	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_RECEIVER) },
