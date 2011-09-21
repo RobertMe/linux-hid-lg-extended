@@ -36,12 +36,6 @@ struct lg_device_queue {
 
 struct lg_device;
 
-struct lg_mx5500_receiver;
-
-struct lg_mx5500_keyboard;
-
-struct lg_mx_revolution;
-
 typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 					  const u8 *payload, size_t size);
 
