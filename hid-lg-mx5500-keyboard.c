@@ -3,6 +3,19 @@
 
 #include "hid-lg-mx5500-keyboard.h"
 
+struct lg_mx5500_keyboard {
+	struct lg_device device;
+	wait_queue_head_t received;
+	u8 devnum;
+	u8 initialized;
+	struct attribute_group attr_group;
+
+	short battery_level;
+	short lcd_page;
+	short time[3];
+	short date[3];
+};
+
 int lg_mx5500_keyboard_init_new(struct hid_device *hdev);
 
 struct lg_device *lg_mx5500_keyboard_init_on_receiver(
