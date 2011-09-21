@@ -6,6 +6,15 @@
 #include "hid-lg-mx5500-keyboard.h"
 #include "hid-lg-mx5500-receiver.h"
 
+struct lg_mx5500_receiver {
+	u8 initialized;
+	u8 max_devices;
+
+	struct lg_device device;
+
+	struct lg_device *connected_devices[LG_MX5500_RECEIVER_MAX_DEVICES];
+};
+
 int lg_mx5500_receiver_init_new(struct hid_device *hdev);
 
 void lg_mx5500_receiver_exit(struct lg_device *device);
