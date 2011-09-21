@@ -3,6 +3,18 @@
 
 #include "hid-lg-mx-revolution.h"
 
+struct lg_mx_revolution {
+	struct lg_device device;
+	wait_queue_head_t received;
+	u8 devnum;
+	u8 initialized;
+	struct attribute_group attr_group;
+
+	short battery_level;
+	u8 scrollmode_set;
+	u8 scrollmode[3];
+};
+
 int lg_mx_revolution_init_new(struct hid_device *hdev);
 
 struct lg_device *lg_mx_revolution_init_on_receiver(

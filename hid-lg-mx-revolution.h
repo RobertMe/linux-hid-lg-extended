@@ -6,18 +6,6 @@
 #include "hid-lg-device.h"
 #include "hid-lg-mx5500-receiver.h"
 
-struct lg_mx_revolution {
-	struct lg_device device;
-	wait_queue_head_t received;
-	u8 devnum;
-	u8 initialized;
-	struct attribute_group attr_group;
-
-	short battery_level;
-	u8 scrollmode_set;
-	u8 scrollmode[3];
-};
-
 enum lg_mx5500_scrollmode {
 	LG_MX5500_SCROLLMODE_FREESPIN_IMMEDIATE = 0x01,
 	LG_MX5500_SCROLLMODE_CLICK_CLICK_IMMEDIATE = 0x02,
