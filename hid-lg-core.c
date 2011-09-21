@@ -24,6 +24,7 @@ struct lg_device *lg_find_device_on_lg_device(struct lg_device *device,
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(lg_find_device_on_lg_device);
 
 struct lg_device *lg_find_device_on_device(struct device *device,
 				       struct hid_device_id device_id)
@@ -35,6 +36,7 @@ struct lg_device *lg_find_device_on_device(struct device *device,
 
 	return lg_find_device_on_lg_device(lg_device, device_id);
 }
+EXPORT_SYMBOL_GPL(lg_find_device_on_device);
 
 struct lg_device *lg_create_on_receiver(struct lg_device *receiver,
 					u8 device_code,
@@ -62,6 +64,7 @@ struct lg_device *lg_create_on_receiver(struct lg_device *receiver,
 
 	return driver->init_on_receiver(receiver, buffer, count);
 }
+EXPORT_SYMBOL_GPL(lg_create_on_receiver);
 
 int lg_register_driver(struct lg_driver *driver)
 {
@@ -96,6 +99,7 @@ error_free:
 error:
 	return ret;
 }
+EXPORT_SYMBOL_GPL(lg_register_driver);
 
 void lg_unregister_driver(struct lg_driver *driver)
 {
@@ -105,6 +109,7 @@ void lg_unregister_driver(struct lg_driver *driver)
 	if (list_empty(&driver->list))
 		INIT_LIST_HEAD(&drivers.list);
 }
+EXPORT_SYMBOL_GPL(lg_unregister_driver);
 
 static struct lg_driver *lg_find_driver(struct hid_device *hdev)
 {
@@ -126,6 +131,7 @@ static struct lg_driver *lg_find_driver(struct hid_device *hdev)
 
 	return driver;
 }
+EXPORT_SYMBOL_GPL(lg_find_driver);
 
 void lg_destroy(struct lg_device *device)
 {

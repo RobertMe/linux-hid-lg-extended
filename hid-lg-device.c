@@ -36,6 +36,7 @@ void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue, co
 
 	spin_unlock_irqrestore(&queue->qlock, flags);
 }
+EXPORT_SYMBOL_GPL(lg_device_queue);
 
 static ssize_t lg_device_hid_send(struct hid_device *hdev, u8 *buffer,
 								size_t count)
@@ -150,6 +151,7 @@ err_free_dev:
 	kfree(device);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(lg_device_init);
 
 int lg_device_init_copy(struct lg_device *device,
 					struct lg_device *from,
@@ -162,6 +164,7 @@ int lg_device_init_copy(struct lg_device *device,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(lg_device_init_copy);
 
 void lg_device_destroy(struct lg_device *device)
 {
@@ -182,3 +185,4 @@ void lg_device_destroy(struct lg_device *device)
 	if (device->out_queue)
 		kfree(device->out_queue);
 }
+EXPORT_SYMBOL_GPL(lg_device_destroy);
