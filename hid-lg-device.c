@@ -110,6 +110,11 @@ int lg_device_event(struct hid_device *hdev, struct hid_report *report,
 
 	device = hid_get_drvdata(hdev);
 
+	if (!device) {
+		hid_err(hdev, "Trying to handle an event on a not initialized device, aborting");
+		return 0;
+	}
+
 	lg_device_queue(device, device->in_queue, raw_data, size);
 
 	return 0;
