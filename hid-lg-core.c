@@ -179,10 +179,10 @@ void lg_remove(struct hid_device *hdev)
 {
 	struct lg_device *device = hid_get_drvdata(hdev);
 
+	hid_hw_stop(hdev);
+
 	if (!device)
 		return;
-
-	hid_hw_stop(hdev);
 
 	lg_destroy(device);
 }
@@ -198,7 +198,6 @@ static const struct hid_device_id lg_hid_devices[] = {
 };
 
 MODULE_DEVICE_TABLE(hid, lg_hid_devices);
-
 
 static int __init lg_init(void)
 {
