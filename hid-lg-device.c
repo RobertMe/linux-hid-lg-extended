@@ -189,5 +189,7 @@ void lg_device_destroy(struct lg_device *device)
 		kfree(device->in_queue);
 	if (device->out_queue)
 		kfree(device->out_queue);
+
+	hid_set_drvdata(device->hdev, NULL);
 }
 EXPORT_SYMBOL_GPL(lg_device_destroy);
