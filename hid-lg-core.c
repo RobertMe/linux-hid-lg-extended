@@ -1,7 +1,5 @@
 #include "hid-lg-core.h"
-#include "hid-lg-mx5500-keyboard.h"
-#include "hid-lg-mx5500-receiver.h"
-#include "hid-lg-mx-revolution.h"
+#include "hid-lg-device.h"
 
 static struct lg_driver drivers;
 
@@ -187,25 +185,9 @@ void lg_remove(struct hid_device *hdev)
 	lg_destroy(device);
 }
 
-static const struct hid_device_id lg_hid_devices[] = {
-	{ HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_RECEIVER) },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_KEYBOARD) },
-	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
-			USB_DEVICE_ID_MX5500_MOUSE) },
-	{ }
-};
-
-MODULE_DEVICE_TABLE(hid, lg_hid_devices);
-
 static int __init lg_init(void)
 {
 	INIT_LIST_HEAD(&drivers.list);
-
-	lg_register_driver(lg_mx5500_keyboard_get_driver());
-	lg_register_driver(lg_mx5500_receiver_get_driver());
-	lg_register_driver(lg_mx_revolution_get_driver());
 
 	return 0;
 }
@@ -223,5 +205,5 @@ module_init(lg_init);
 module_exit(lg_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Robert Meijers <robert.meijers@gmail.com>");
-MODULE_DESCRIPTION("Logitech MX5500 sysfs information");
+MODULE_DESCRIPTION("Logitech HID extended driver");
 MODULE_VERSION("0.1");

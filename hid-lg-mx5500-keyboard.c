@@ -1,6 +1,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 
+#include "hid-lg-mx5500.h"
 #include "hid-lg-mx5500-keyboard.h"
 
 struct lg_mx5500_keyboard {

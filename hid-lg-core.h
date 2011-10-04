@@ -5,9 +5,6 @@
 #include <linux/list.h>
 
 #define USB_VENDOR_ID_LOGITECH          0x046d
-#define USB_DEVICE_ID_MX5500_RECEIVER   0xc71c
-#define USB_DEVICE_ID_MX5500_KEYBOARD   0xb30b
-#define USB_DEVICE_ID_MX5500_MOUSE      0xb007
 
 #define LG_DRIVER_NO_CODE 0x00
 
