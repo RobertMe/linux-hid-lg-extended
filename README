@@ -1,0 +1,128 @@
+Extended Linux Logitech HID driver
+==================================
+
+Introduction
+------------
+This driver extends the default HID driver of the Linux kernel. For Logitech
+devices it add supports for reading and writing some attributes for different
+devices. The specifics per device will be described in their own section.
+One, for now, common feature among the supported devices is being able to read
+the battery levels. All the attributes, including the battery level, are exported
+using there own sysfs entry. These entries are placed under there already
+existing device entry. The easiest way to find them is in /sys/bus/hid/devices
+where all the HID devices are placed.
+
+Usage
+-----
+1. Build the modules using the Makefile
+2. Place all or some modules in the kernel modules folder
+(/lib/modules/`uname -r`/kernel/drivers/hid). hid-logitech-core.ko is always
+needed as it contains the base for the other modules
+3. Run depmod
+4. Manually insert the module(s) for the device to use using modprobe. The core
+module doesn't have to be loaded manually as it will happen automaticly
+
+If the attributes aren't created it means another driver is already
+connected to the device (most likely, this would be the generic-usb driver).
+This means the device should first be unbind from the old (in use) driver and
+bind to this new driver.
+
+Unbind and bind driver
+1. Find the name of the device in /sys/bus/hid/devices. The device can be
+identified by its product code, which follows after the 046D: (Logitech vendor
+code). The whole line is needed. So the full XXXX:XXXX:XXXX:XXXX
+2. Unbind the device from its current driver with:
+echo -n "<name>" > /sys/bus/hid/devices/<name>/driver/unbind (replace <name>
+with the name found in step 1)
+3. Bind the device to the new driver with:
+echo -n "<name>" > /sys/bus/hid/drivers/<drivername>/bind (again replace <name>
+with the name found in step 1 and <drivername> with the name of the new driver)
+
+Modules
+-------
+One module can add support for more than one driver. The hid-logitech-mx5500
+module exposes 3 drivers, "Logitech MX5500 Receiver" for the receiver of the
+MX5500 desktopset, "Logitech MX5500" for the MX5500 keyboard (connected using
+bluetooth, when using the receiver it's handeld automaticly) and
+"Logitech MX Revolution" for the MX Revolution mouse provided with the MX5500
+desktopset (again when connected using bluetooth and the automatic handling
+when using the receiver). The hid-logitech-vx-revolution module only contains
+the driver for the VX Revolution mouse using the "Logitech VX Revolution"
+driver.
+
+MX5500
+------
+Supported attributes:
+- Reading the battery level in per cent (battery)
+- Reading the page number of the currently active LCD page (lcd_page). This
+only works after it has been changed at least one time, otherwise it will
+display 0
+- Reading and writing the current time as displayed on the LCD display (time).
+The format is hour:minute:second
+- Reading and writing the current date as displayed on the LCD display (date).
+The format is year month day. The year shouldn't contain the century, thus
+should only be 11 for 2011
+- Reading the name of the device (name). This could be used for the automatic
+reading of some values and the name should be displayed
+
+MX revolution
+-------------
+Supported attributes:
+- Reading the battery level in per cent (battery)
+- Reading and writing the scrollmode (scrollmode)
+
+Setting the scrollmode
+When setting the scroll mode there are a lot of options. Every option is
+specified as an integer and all the values should be separated by a space.
+The first option is the mode. These could be:
+
+- 1 Switch immediately to freespin
+- 2 Switch immediately to click-to-click
+- 3 Switch to freespin when the scrollwheel is moved
+- 4 Switch to click-to-click when the scrollwheel is moved
+- 5 Switch automaticly between freespin and click-to-click based on the
+scrollspeed
+- 6 Unused (will yield an error)
+- 7 Use one button to switch to freespin and another to switch to
+click-to-click
+- 8 Toggle between freespin and click-to-click using a single button
+
+After the mode there is an option to set the mode to temporarily or default.
+0 means temporarily and 1 means default after power on. This option is
+optional for the first four modes and defaults to 0 temporarily.
+
+When using the automatic mode, 5, two options can be specified. The first is
+for the number of clicks when scrolling up to switch to freespin, and the
+second for the number of clicks when scrolling down. The second value can be
+omitted and defaults to the first value. The click speed should be between
+1 and 50.
+
+When using the button toggle mode, 8, only one extra option must be specified.
+The button number. When using the button switch mode, 7, two extra options must
+be specified. The first is the button to switch to freespin, the second to
+switch to click-to-click.
+
+Button numbers
+-  1 left button (can't be used)
+-  2 right button (can't be used)
+-  3 middle (wheel) button
+-  4 rear thumb button
+-  5 front thumb button
+-  6 find button
+-  7 wheel left tilt
+-  8 wheel right tilt
+-  9 side wheel forward
+- 11 side wheel backward
+- 13 side wheel pressed
+
+MX5500 bluetooth receiver
+-------------------------
+At the moment the bluetooth receiver doesn't have any attributes. It's only use is
+making a distiction between the connected devices. The MX5500 keyboard, when
+connected, will put its attributes in a keyboard subdirectory. The MX revolution
+mouse does the same thing, but puts its attributes in a mouse subdirectory.
+
+VX revolution
+-------------
+Supported attributes:
+- Reading the battery level in per cent (battery)
