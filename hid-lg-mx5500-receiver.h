@@ -10,7 +10,6 @@
 
 #include <linux/hid.h>
 
-#include "hid-lg-core.h"
 #include "hid-lg-device.h"
 
 #define LG_MX5500_RECEIVER_MAX_DEVICES 0x03

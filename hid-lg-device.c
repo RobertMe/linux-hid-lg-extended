@@ -9,11 +9,8 @@
 #include <linux/module.h>
 #include <linux/spinlock.h>
 
-#include "hid-lg-mx-revolution.h"
 #include "hid-lg-core.h"
 #include "hid-lg-device.h"
-#include "hid-lg-mx5500-receiver.h"
-#include "hid-lg-mx5500-keyboard.h"
 
 void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue, const u8 *buffer,
 								size_t count)
