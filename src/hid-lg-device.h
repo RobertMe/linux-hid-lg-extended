@@ -9,11 +9,8 @@
  */
 
 #include <linux/hid.h>
-#include <linux/workqueue.h>
 
 #include "hid-lg-core.h"
-
-#define LG_DEVICE_BUFSIZE 32
 
 #define LG_DEVICE_HANDLER_IGNORE NULL
 
@@ -26,25 +23,12 @@ enum lg_device_actions {
 	LG_DEVICE_ACTION_DO = 0x83,
 };
 
-struct lg_device_buf {
-	u8 data[HID_MAX_BUFFER_SIZE];
-	size_t size;
-};
-
-struct lg_device_queue {
-	spinlock_t qlock;
-	u8 head;
-	u8 tail;
-	struct lg_device_buf queue[LG_DEVICE_BUFSIZE];
-	struct work_struct worker;
-
-	struct lg_device *main_device;
-};
-
 struct lg_device;
 
 typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 					  const u8 *payload, size_t size);
+
+struct lg_device_queue;
 
 struct lg_device {
 	struct hid_device *hdev;

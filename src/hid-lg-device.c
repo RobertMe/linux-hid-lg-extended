@@ -8,9 +8,27 @@
 #include <linux/hid.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
+#include <linux/workqueue.h>
 
 #include "hid-lg-core.h"
 #include "hid-lg-device.h"
+
+#define LG_DEVICE_BUFSIZE 32
+
+struct lg_device_buf {
+	u8 data[HID_MAX_BUFFER_SIZE];
+	size_t size;
+};
+
+struct lg_device_queue {
+	spinlock_t qlock;
+	u8 head;
+	u8 tail;
+	struct lg_device_buf queue[LG_DEVICE_BUFSIZE];
+	struct work_struct worker;
+
+	struct lg_device *main_device;
+};
 
 void lg_device_queue(struct lg_device *device, struct lg_device_queue *queue, const u8 *buffer,
 								size_t count)
