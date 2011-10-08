@@ -14,10 +14,8 @@ where all the HID devices are placed.
 
 Usage
 -----
-1. Build the modules using the Makefile
-2. Place all or some modules in the kernel modules folder
-(/lib/modules/`uname -r`/kernel/drivers/hid). hid-logitech-core.ko is always
-needed as it contains the base for the other modules
+1. Build the modules (make)
+2. Install the modules (make install)
 3. Run depmod
 4. Manually insert the module(s) for the device to use using modprobe. The core
 module doesn't have to be loaded manually as it will happen automaticly
