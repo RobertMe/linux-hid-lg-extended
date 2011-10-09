@@ -19,3 +19,6 @@ clean:
 
 install:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
+
+headers_install:
+	install -m 0644 include/linux/hid-lg-extended.h $(KDIR)/include/linux/hid-lg-extended.h
