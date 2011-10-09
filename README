@@ -23,18 +23,9 @@ module doesn't have to be loaded manually as it will happen automaticly
 If the attributes aren't created it means another driver is already
 connected to the device (most likely, this would be the generic-usb driver).
 This means the device should first be unbind from the old (in use) driver and
-bind to this new driver.
-
-Unbind and bind driver
-1. Find the name of the device in /sys/bus/hid/devices. The device can be
-identified by its product code, which follows after the 046D: (Logitech vendor
-code). The whole line is needed. So the full XXXX:XXXX:XXXX:XXXX
-2. Unbind the device from its current driver with:
-echo -n "<name>" > /sys/bus/hid/devices/<name>/driver/unbind (replace <name>
-with the name found in step 1)
-3. Bind the device to the new driver with:
-echo -n "<name>" > /sys/bus/hid/drivers/<drivername>/bind (again replace <name>
-with the name found in step 1 and <drivername> with the name of the new driver)
+bind to this new driver. To solve this problem you can rebuild the kernels hid
+module and place the needed hid_device_ids on the hid_ignore_list, or the
+easier, but not permantent, solution is to run the provided lg_bind script.
 
 Modules
 -------
