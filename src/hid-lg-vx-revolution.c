@@ -41,7 +41,8 @@ struct lg_vx_revolution_handler {
 };
 
 static struct lg_driver driver = {
-	.name = "Logitech VX Revolution",
+	.name = "logitech-vx-revolution",
+	.device_name = "Logitech VX Revolution",
 	.device_id = { HID_USB_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_VX_REVOLUTION) },
 	.device_code = LG_DRIVER_NO_CODE,
