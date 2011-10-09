@@ -5,7 +5,8 @@
  * any later version.
  */
 
-#include "hid-lg-core.h"
+#include <linux/hid-lg-extended.h>
+
 #include "hid-lg-mx5500.h"
 #include "hid-lg-mx5500-keyboard.h"
 #include "hid-lg-mx5500-receiver.h"

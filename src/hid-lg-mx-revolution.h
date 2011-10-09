@@ -9,8 +9,7 @@
  */
 
 #include <linux/hid.h>
-
-#include "hid-lg-device.h"
+#include <linux/hid-lg-extended.h>
 
 enum lg_mx5500_scrollmode {
 	LG_MX5500_SCROLLMODE_FREESPIN_IMMEDIATE = 0x01,

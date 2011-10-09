@@ -5,8 +5,7 @@
  * any later version.
  */
 
-#include "hid-lg-core.h"
-#include "hid-lg-device.h"
+#include <linux/hid-lg-extended.h>
 
 static struct lg_driver drivers;
 

@@ -5,11 +5,10 @@
  * any later version.
  */
 
+#include <linux/hid.h>
+#include <linux/hid-lg-extended.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
-
-#include "hid-lg-core.h"
-#include "hid-lg-device.h"
 
 #define USB_DEVICE_ID_VX_REVOLUTION 0xc521
 

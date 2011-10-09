@@ -8,7 +8,6 @@
 #include <linux/hid.h>
 #include <asm/atomic.h>
 
-#include "hid-lg-core.h"
 #include "hid-lg-mx5500.h"
 #include "hid-lg-mx5500-receiver.h"
 

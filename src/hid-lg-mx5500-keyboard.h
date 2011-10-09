@@ -9,8 +9,7 @@
  */
 
 #include <linux/hid.h>
-
-#include "hid-lg-device.h"
+#include <linux/hid-lg-extended.h>
 
 struct lg_driver *lg_mx5500_keyboard_get_driver(void);
 

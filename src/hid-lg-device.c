@@ -6,12 +6,10 @@
  */
 
 #include <linux/hid.h>
+#include <linux/hid-lg-extended.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
-
-#include "hid-lg-core.h"
-#include "hid-lg-device.h"
 
 #define LG_DEVICE_BUFSIZE 32
 

@@ -6,6 +6,8 @@ obj-m := hid-logitech-core.o
 obj-m += hid-logitech-mx5500.o
 obj-m += hid-logitech-vx-revolution.o
 
+ccflags-y += -I$(src)/include/
+
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 
