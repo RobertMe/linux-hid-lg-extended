@@ -36,7 +36,8 @@ void lg_mx5500_keyboard_handle(struct lg_device *device, const u8 *buffer,
 								size_t count);
 
 static struct lg_driver driver = {
-	.name = "Logitech MX5500",
+	.name = "logitech-mx5500",
+	.device_name = "Logitech MX5500",
 	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_KEYBOARD) },
 	.device_code = 0xb3,
@@ -128,7 +129,7 @@ static DEVICE_ATTR(lcd_page, S_IRUGO, keyboard_show_lcd_page, NULL);
 static ssize_t keyboard_show_name(struct device *device,
 			struct device_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.name);
+	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.device_name);
 }
 
 static DEVICE_ATTR(name, S_IRUGO, keyboard_show_name, NULL);

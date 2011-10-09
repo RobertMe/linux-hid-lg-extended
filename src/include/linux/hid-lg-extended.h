@@ -29,6 +29,7 @@ typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
 
 struct lg_driver {
     char *name;
+    char *device_name;
     struct hid_device_id device_id;
     struct hid_driver hid_driver;
     u8 device_code;

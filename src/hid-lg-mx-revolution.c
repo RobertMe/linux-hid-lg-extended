@@ -35,7 +35,8 @@ void lg_mx_revolution_handle(struct lg_device *device, const u8 *buffer,
 								size_t count);
 
 static struct lg_driver driver = {
-	.name = "Logitech MX Revolution",
+	.name = "logitech-mx-revolution",
+	.device_name = "Logitech MX Revolution",
 	.device_id = { HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_LOGITECH,
 			USB_DEVICE_ID_MX5500_MOUSE) },
 	.device_code = 0xb0,
@@ -102,7 +103,7 @@ static DEVICE_ATTR(battery, S_IRUGO, mouse_show_battery, NULL);
 static ssize_t mouse_show_name(struct device *device,
 			struct device_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.name);
+	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.device_name);
 }
 
 static DEVICE_ATTR(name, S_IRUGO, mouse_show_name, NULL);
