@@ -1,0 +1,15 @@
+#!/bin/bash
+
+MINLEVEL=${1:-25}
+FILES=$(find /sys/bus/hid/devices/*/ -name battery)
+
+for FILE in $FILES
+do
+	LEVEL=$(cat $FILE)
+	LEVEL=${LEVEL//%/}
+	if [ $LEVEL -lt $MINLEVEL ]
+	then
+		NAME=$(cat $(dirname $FILE)/name)
+		env $(grep DISPLAY -z /proc/$(ps U $(id -u) | grep dbus-daemon | head -1 | cut -d' ' -f2)/environ)  notify-send "Battery level low" "The batteries of device ${NAME} are low. Only ${LEVEL}% remaining" -t 5000
+	fi
+done
