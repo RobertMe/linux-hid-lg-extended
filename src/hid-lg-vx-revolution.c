@@ -79,7 +79,7 @@ static DEVICE_ATTR(battery, S_IRUGO, mouse_show_battery, NULL);
 static ssize_t mouse_show_name(struct device *device,
 			struct device_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.name);
+	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.device_name);
 }
 
 static DEVICE_ATTR(name, S_IRUGO, mouse_show_name, NULL);
