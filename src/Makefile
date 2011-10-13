@@ -8,7 +8,8 @@ obj-m += hid-logitech-vx-revolution.o
 
 ccflags-y += -I$(src)/include/
 
-KDIR := /lib/modules/$(shell uname -r)/build
+KVER ?= $(shell uname -r)
+KDIR := /lib/modules/$(KVER)/build
 PWD := $(shell pwd)
 
 default:
