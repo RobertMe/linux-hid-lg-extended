@@ -112,7 +112,7 @@ static ssize_t keyboard_show_battery(struct device *device,
 	return scnprintf(buf, PAGE_SIZE, "%d%%\n", keyboard->battery_level);
 }
 
-static DEVICE_ATTR(battery, S_IRUGO, keyboard_show_battery, NULL);
+static DEVICE_ATTR(battery, 0444, keyboard_show_battery, NULL);
 
 static ssize_t keyboard_show_lcd_page(struct device *device,
 			struct device_attribute *attr, char *buf)
@@ -124,7 +124,7 @@ static ssize_t keyboard_show_lcd_page(struct device *device,
 	return scnprintf(buf, PAGE_SIZE, "%d\n", keyboard->lcd_page);
 }
 
-static DEVICE_ATTR(lcd_page, S_IRUGO, keyboard_show_lcd_page, NULL);
+static DEVICE_ATTR(lcd_page, 0444, keyboard_show_lcd_page, NULL);
 
 static ssize_t keyboard_show_name(struct device *device,
 			struct device_attribute *attr, char *buf)
@@ -132,7 +132,7 @@ static ssize_t keyboard_show_name(struct device *device,
 	return scnprintf(buf, PAGE_SIZE, "%s\n", driver.device_name);
 }
 
-static DEVICE_ATTR(name, S_IRUGO, keyboard_show_name, NULL);
+static DEVICE_ATTR(name, 0444, keyboard_show_name, NULL);
 
 static ssize_t keyboard_show_time(struct device *device,
 		struct device_attribute *attr, char *buf)
@@ -171,7 +171,7 @@ static ssize_t keyboard_store_time(struct device *device,
 	return count;
 }
 
-static DEVICE_ATTR(time, S_IRUGO | S_IWUGO, keyboard_show_time, keyboard_store_time);
+static DEVICE_ATTR(time, 0644, keyboard_show_time, keyboard_store_time);
 
 static ssize_t keyboard_show_date(struct device *device,
 		struct device_attribute *attr, char *buf)
@@ -218,7 +218,7 @@ static ssize_t keyboard_store_date(struct device *device,
 	return count;
 }
 
-static DEVICE_ATTR(date, S_IRUGO | S_IWUGO, keyboard_show_date, keyboard_store_date);
+static DEVICE_ATTR(date, 0644, keyboard_show_date, keyboard_store_date);
 
 static struct attribute *keyboard_attrs[] = {
 	&dev_attr_battery.attr,
