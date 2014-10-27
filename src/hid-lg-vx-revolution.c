@@ -5,6 +5,7 @@
  * any later version.
  */
 
+#include <linux/module.h>
 #include <linux/hid.h>
 #include <linux/hid-lg-extended.h>
 #include <linux/sched.h>

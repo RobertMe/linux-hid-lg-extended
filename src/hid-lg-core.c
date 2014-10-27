@@ -5,10 +5,10 @@
  * any later version.
  */
 
+#include <linux/module.h>
 #include <linux/hid-lg-extended.h>
 
 static struct lg_driver drivers;
-
 
 int lg_probe(struct hid_device *hdev,
 				const struct hid_device_id *id);
@@ -213,3 +213,4 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Robert Meijers <robert.meijers@gmail.com>");
 MODULE_DESCRIPTION("Logitech HID extended driver");
 MODULE_VERSION("0.1");
+

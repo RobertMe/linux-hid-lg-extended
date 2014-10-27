@@ -5,6 +5,7 @@
  * any later version.
  */
 
+#include <linux/module.h>
 #include <linux/hid-lg-extended.h>
 
 #include "hid-lg-mx5500.h"
