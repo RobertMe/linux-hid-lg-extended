@@ -64,15 +64,21 @@ static ssize_t lg_device_hid_send(struct hid_device *hdev, u8 *buffer,
 	u8 *buf;
 	ssize_t ret;
 
-	if (!hdev->hid_output_raw_report)
+	if (!hdev->ll_driver->raw_request || !hdev->ll_driver->output_report)
 		return -ENODEV;
 
 	buf = kmemdup(buffer, count, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
-	ret = hdev->hid_output_raw_report(hdev, buf, count, HID_OUTPUT_REPORT);
+	ret = hid_hw_output_report(hdev, buf, count);
 
+	if (ret != -ENOSYS)
+	    goto out_free;
+
+	ret = hid_hw_raw_request(hdev, buf[0], buf, count, HID_OUTPUT_REPORT, HID_REQ_SET_REPORT);
+
+out_free:
 	kfree(buf);
 	return ret;
 }
