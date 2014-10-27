@@ -65,10 +65,6 @@ enum lg_device_actions {
     LG_DEVICE_ACTION_DO = 0x83,
 };
 
-struct lg_device;
-
-typedef void (*lg_device_hid_receive_handler)(struct lg_device *device,
-                      const u8 *payload, size_t size);
 
 struct lg_device_queue;
 
